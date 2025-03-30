@@ -89,6 +89,15 @@ void lexer_close(lexer_t *lex) {
     memset(lex, 0, sizeof(lexer_t));
 }
 
+/**
+ * Attempts to fill the lexer's internal buffer with more data from the file.
+ * Only reads data if the buffer isn't already full and the file hasn't reached
+ * EOF.
+ *
+ * @param lex The lexer to fill the buffer for
+ * @return nullptr on success, an error otherwise (including err_eof if EOF
+ * reached with empty buffer)
+ */
 error_t *lexer_fill_buffer(lexer_t *lex) {
     if (feof(lex->fp) && lex->buffer_count == 0)
         return err_eof;
@@ -126,7 +135,17 @@ error_t *lexer_open(lexer_t *lex, char *path) {
     return nullptr;
 }
 
+/**
+ * Shifts the lexer's buffer by n characters, discarding the first n characters
+ * and moving the remaining characters to the beginning of the buffer.
+ *
+ * @param lex The lexer whose buffer to shift
+ * @param n Number of characters to shift out
+ *
+ * @pre There must be at least n characters in the input buffer
+ */
 void lexer_shift_buffer(lexer_t *lex, int n) {
+    assert(lex->buffer_count >= n);
     lex->buffer_count -= n;
     memmove(lex->buffer, lex->buffer + n, lex->buffer_count);
 }
@@ -142,9 +161,13 @@ error_t *lexer_peek(lexer_t *lex, char *c) {
     return nullptr;
 }
 
-// This does _not_ fill the internal lexer buffer and you _must_ call
-// lexer_fill_buffer() before calling this. It will always return false if your
-// prefix is larger than lexer_buffer_size
+/**
+ * Checks if the lexer's buffer starts with the given prefix.
+ *
+ * @param lex The lexer to check
+ * @param prefix The string prefix to check for
+ * @return true if the buffer starts with the prefix, false otherwise
+ */
 bool lexer_has_prefix(lexer_t *lex, char *prefix) {
     size_t len = strlen(prefix);
     if (len > lex->buffer_count)
@@ -159,6 +182,17 @@ error_t *lexer_not_implemented(lexer_t *lex, lexer_token_t *token) {
                   lex->character_number);
 }
 
+/**
+ * Consumes exactly n characters from the buffer into the provided output
+ * buffer.
+ *
+ * @param lex The lexer to consume from
+ * @param len Size of the output buffer
+ * @param buffer Output buffer to store the consumed characters
+ * @param n Number of characters to consume
+ * @return nullptr on success, an error otherwise (err_buffer_underrun if buffer
+ * contains fewer than n characters)
+ */
 error_t *lexer_consume_n(lexer_t *lex, const size_t len,
                          char buffer[static len], const size_t n) {
     if (lex->buffer_count < n)
@@ -170,6 +204,20 @@ error_t *lexer_consume_n(lexer_t *lex, const size_t len,
     lexer_shift_buffer(lex, n);
     return nullptr;
 }
+
+/**
+ * Consumes characters from the lexer buffer that satisfy the predicate
+ * function. Will attempt to refill the buffer if more valid characters are
+ * available.
+ *
+ * @param lex The lexer to consume from
+ * @param n Maximum number of characters to consume
+ * @param buffer Output buffer to store consumed characters
+ * @param is_valid Function that determines if a character should be consumed
+ * @param n_consumed Output parameter that will contain the number of characters
+ * consumed
+ * @return nullptr on success, an error otherwise
+ */
 error_t *lexer_consume(lexer_t *lex, const size_t n, char buffer[static n],
                        char_predicate_t is_valid, size_t *n_consumed) {
     const size_t buffer_size = n;
@@ -217,6 +265,18 @@ bool is_decimal_character(char c) {
     return isdigit(c);
 }
 
+/**
+ * Processes a number token (decimal, hexadecimal, octal, or binary).
+ * Handles number formats with optional size suffixes.
+ *
+ * @param lex The lexer to read from
+ * @param token Output parameter that will be populated with the token
+ * information
+ * @return nullptr on success, an error otherwise
+ *
+ * @pre There must be at least one character in the input buffer and it should
+ * be [0-9]
+ */
 error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
     constexpr size_t max_number_length = 128;
     size_t so_far = 0;
@@ -294,6 +354,19 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
     token->value = strdup(buffer);
     return nullptr;
 }
+
+/**
+ * Processes a newline token (\n or \r\n).
+ * Updates the lexer's line and character position tracking.
+ *
+ * @param lex The lexer to read from
+ * @param token Output parameter that will be populated with the token
+ * information
+ * @return nullptr on success, an error otherwise
+ *
+ * @pre There must be at least on character in the input buffer and it must
+ * be [\r\n]
+ */
 error_t *lexer_next_newline(lexer_t *lex, lexer_token_t *token) {
     token->line_number = lex->line_number;
     token->character_number = lex->character_number;
@@ -323,6 +396,19 @@ bool is_identifier_character(char c) {
     return isalnum(c) || c == '_';
 }
 
+/**
+ * Processes an identifier token.
+ * Identifiers start with a letter or underscore and can contain alphanumeric
+ * characters or underscores.
+ *
+ * @param lex The lexer to read from
+ * @param token Output parameter that will be populated with the token
+ * information
+ * @return nullptr on success, an error otherwise
+ *
+ * @pre There must be at least 1 character in the read buffer and it must be
+ * [a-zA-Z_]
+ */
 error_t *lexer_next_identifier(lexer_t *lex, lexer_token_t *token) {
     constexpr size_t max_identifier_length = 128;
     size_t n = 0;
@@ -355,6 +441,17 @@ bool is_whitespace_character(char c) {
     return c == ' ' || c == '\t';
 }
 
+/**
+ * Processes a whitespace token (spaces and tabs).
+ *
+ * @param lex The lexer to read from
+ * @param token Output parameter that will be populated with the token
+ * information
+ * @return nullptr on success, an error otherwise
+ *
+ * @pre There must be at least one character in the buffer and it must be
+ * [ \t]
+ */
 error_t *lexer_next_whitespace(lexer_t *lex, lexer_token_t *token) {
     constexpr size_t max_whitespace_length = 1024;
     size_t n = 0;
@@ -380,6 +477,16 @@ bool is_comment_character(char c) {
     return c != '\r' && c != '\n';
 }
 
+/**
+ * Processes a comment token (starts with ';' and continues to end of line).
+ *
+ * @param lex The lexer to read from
+ * @param token Output parameter that will be populated with the token
+ * information
+ * @return nullptr on success, an error otherwise
+ *
+ * @pre There must be at least one character in the buffer and it must be ';'
+ */
 error_t *lexer_next_comment(lexer_t *lex, lexer_token_t *token) {
     constexpr size_t max_comment_length = 1024;
     size_t n = 0;

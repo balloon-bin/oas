@@ -47,10 +47,43 @@ typedef struct lexer {
     FILE *fp;
 } lexer_t;
 
+/**
+ * @brief Closes a lexer and releases associated resources
+ *
+ * @param lex Pointer to the lexer to close
+ */
 void lexer_close(lexer_t *lex);
+
+/**
+ * @brief Opens a file for lexical analysis
+ *
+ * @param lex Pointer to the lexer to initialize
+ * @param path Path to the file to open
+ * @return error_t* nullptr on success, or error describing the failure
+ */
 error_t *lexer_open(lexer_t *lex, char *path);
+
+/**
+ * @brief Reads the next token from the input stream
+ *
+ * @param lex Pointer to an initialized lexer
+ * @param token Pointer to a token structure to fill with the next token
+ * @return error_t* nullptr on success, err_eof at end of file, or other error
+ */
 error_t *lexer_next(lexer_t *lex, lexer_token_t *token);
+
+/**
+ * @brief Prints a token to stdout for debugging purposes
+ *
+ * @param token Pointer to the token to print
+ */
 void lexer_token_print(lexer_token_t *token);
+
+/**
+ * @brief Frees any resources associated with a token
+ *
+ * @param token Pointer to the token to clean up
+ */
 void lexer_token_cleanup(lexer_token_t *token);
 
 #endif // INCLUDE_SRC_LEXER_H_
