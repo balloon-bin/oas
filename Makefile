@@ -25,8 +25,12 @@ fuzz:
 	afl-fuzz -i tests/input -o reports/afl -m none -- ./oas-afl -tokens @@
 
 sanitize:
-	make CFLAGS="$(CFLAGS) -fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" TARGET="oas-asan" clean-objects all
-	make CFLAGS="$(CFLAGS) -fsanitize=memory -fsanitize-memory-track-origins=2" LDFLAGS="-fsanitize=memory -fsanitize-memory-track-origins=2" TARGET="oas-msan" clean-objects all 
+	make CFLAGS="$(CFLAGS) -fsanitize=address,undefined" \
+		LDFLAGS="-fsanitize=address,undefined" \
+		TARGET="oas-asan" clean-objects all
+	make CFLAGS="$(CFLAGS) -fsanitize=memory -fsanitize-memory-track-origins=2" \
+		LDFLAGS="-fsanitize=memory -fsanitize-memory-track-origins=2" \
+		TARGET="oas-msan" clean-objects all 
 	make clean-objects
 
 validate:
