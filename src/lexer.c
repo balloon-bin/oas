@@ -310,6 +310,7 @@ error_t *lexer_next_newline(lexer_t *lex, lexer_token_t *token) {
         lex->character_number = 0;
         lex->line_number += 1;
     } else {
+        lexer_shift_buffer(lex, 1);
         token->id = TOKEN_ERROR;
         lex->character_number += 1;
         token->value = strdup((char[]){lex->buffer[0]});
