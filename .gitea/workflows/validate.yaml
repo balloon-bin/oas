@@ -1,0 +1,36 @@
+name: Validate the build 
+run-name: ${{ gitea.actor }} is validating code with clang 19
+on: [push]
+
+jobs:
+  validate-build:
+    runs-on: ubuntu-latest
+    container:
+      image: node:18-alpine
+    steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-cache git make bash
+
+          # Install LLVM/Clang 19 from edge repository
+          echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+          echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+
+          apk update
+          apk add --no-cache llvm19 clang19 clang19-analyzer compiler-rt valgrind
+
+          # Verify versions
+          echo "---------------------"
+          echo "Clang version:"
+          clang --version
+          echo "---------------------"
+          echo "Valgrind version:"
+          valgrind --version
+          echo "---------------------"
+
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: make validate
+        run: |
+          make validate
