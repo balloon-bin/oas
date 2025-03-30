@@ -1,0 +1,7 @@
+*.o
+*.d
+/core
+/oas
+/oas-asan
+/oas-msan
+/reports

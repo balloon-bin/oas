@@ -1,0 +1,5 @@
+BasedOnStyle:    LLVM
+IndentWidth:     4
+Cpp11BracedListStyle: true
+AlignArrayOfStructures: Left
+AllowShortFunctionsOnASingleLine: Empty

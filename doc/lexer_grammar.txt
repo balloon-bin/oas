@@ -1,0 +1,46 @@
+/* These non-terminals are the actual tokens the lexer emits */
+<identifier>  ::= <identifier_start> <identifier_character>+
+<decimal>     ::= [0-9]+
+
+<hexadecimal> ::= "0x" <hex_digit>+ <number_suffix>?
+<binary>      ::= "0b" [0-1]+ <number_suffix>?
+<octal>       ::= "0o" [0-7]+ <number_suffix>?
+<string>      ::= "\"" <string_unit>+ "\""
+<character>   ::= "'" <character_unit> "'"
+<colon>       ::= ":"
+<comma>       ::= ","
+<lbracket>    ::= "["
+<rbracket>    ::= "]"
+<plus>        ::= "+"
+<minus>       ::= "-"
+<asterisk>    ::= "*"
+<dot>         ::= "."
+<comment>     ::= ";" <comment_character>*
+<newline>     ::= "\r"? "\n"
+<whitespace>  ::= ( " " | "\t" )+
+
+/* helper non-terminals to make it easier to define the tokens */
+<number_suffix> ::= ":" ( "8" | "16" | "32" | "64" )
+
+<identifier_start> ::= [a-z] | [A-Z] | "_"
+<identifier_character> ::= [a-z] | [A-Z] | [0-9] | "_"
+
+<hex_digit> ::= [a-f] | [A-F]
+
+<string_unit> ::= <string_regular> | <escaped>
+<character_unit> ::= <character_regular> | <escaped>
+
+<escaped> ::= "\\" ( <escape_list> | <escape_hex> )
+<escape_list> ::= "\\" | "n" | "r" | "t" | "0" | "\"" | "'"
+<escape_hex> ::= "x" <hex_digit> <hex_digit>
+
+/* alternative definitions to support bnfplayground, use the ones below instead */
+<comment_character> ::= <shared_regular> | "'" | "\""
+<string_regular> ::= <shared_regular> | "'"
+<character_regular> ::= <shared_regular> | "\""
+<shared_regular> ::= [a-z] | [A-Z] | [0-9] | " " | "+" | "-" | "#" | "\t" | "_" | "$" | "&" | "{" | "}" | "(" | ")" | "|"
+
+/* actual definition we're implementing */
+/* <comment_character> ::= [^\r\n] */
+/* <character_regular> ::= [^\\'] */
+/* <string_regular> ::= [^\\"] */
