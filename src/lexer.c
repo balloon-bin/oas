@@ -150,17 +150,6 @@ void lexer_shift_buffer(lexer_t *lex, int n) {
     memmove(lex->buffer, lex->buffer + n, lex->buffer_count);
 }
 
-error_t *lexer_peek(lexer_t *lex, char *c) {
-    error_t *err = lexer_fill_buffer(lex);
-    if (err)
-        return err;
-    if (lex->buffer_count == 0)
-        return err_eof;
-    *c = lex->buffer[0];
-    lexer_shift_buffer(lex, 1);
-    return nullptr;
-}
-
 /**
  * Checks if the lexer's buffer starts with the given prefix.
  *
