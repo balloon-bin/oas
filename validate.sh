@@ -3,7 +3,9 @@
 set -euo pipefail
 
 # Start with static analysis
-scan-build -o reports/ -plist-html --status-bugs make clean all
+make clean all
+mkdir -p reports/static-analysis
+scan-build -o reports/static-analysis/ -plist-html --status-bugs make all
 
 # Run the sanitizer builds and valgrind
 make clean sanitize all

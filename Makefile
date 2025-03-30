@@ -1,4 +1,4 @@
-.PHONY: all clean clean-objects run sanitize validate
+.PHONY: all clean clean-objects clean-reports run sanitize validate fuzz
 
 CC=clang
 LD=clang
@@ -9,14 +9,20 @@ SOURCES = $(shell find src/ -type f -name '*.c')
 OBJECTS = $(SOURCES:.c=.o)
 DEPENDENCIES = $(SOURCES:.c=.d)
 TARGET?=oas
-OUTPUTS=oas oas-asan oas-msan
-RUNARGUMENTS=-tokens test.asm
+OUTPUTS=oas oas-asan oas-msan oas-afl
+RUNARGUMENTS?=-tokens tests/input/valid.asm
 
 all: $(TARGET)
 	
 
 run: $(TARGET)
 	./$(TARGET) $(RUNARGUMENTS)
+
+fuzz:
+	make CC="afl-clang-fast" LD="afl-clang-fast" TARGET="oas-afl" clean-objects all
+	make clean-objects
+	mkdir -p reports/afl
+	afl-fuzz -i tests/input -o reports/afl -m none -- ./oas-afl -tokens @@
 
 sanitize:
 	make CFLAGS="$(CFLAGS) -fsanitize=address,undefined" LDFLAGS="-fsanitize=address,undefined" TARGET="oas-asan" clean-objects all
@@ -37,6 +43,8 @@ $(TARGET): $(OBJECTS)
 clean-objects:
 	rm -f $(OBJECTS) $(DEPENDENCIES)
 
+clean-reports:
+	rm -rf reports/
+
 clean: clean-objects
 	rm -f $(TARGET) $(OUTPUTS)
-	rm -rf reports/
