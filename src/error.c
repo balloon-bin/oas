@@ -10,6 +10,9 @@ error_t *const err_errorf_length = &(error_t){
     .message =
         "Formatting of another error failed to determine the error length"};
 
+error_t *err_allocation_failed =
+    &(error_t){.message = "Memory allocation failed"};
+
 error_t *errorf(const char *fmt, ...) {
     error_t *err = calloc(1, sizeof(error_t));
     if (err == nullptr)

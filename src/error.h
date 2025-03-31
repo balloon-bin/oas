@@ -18,4 +18,7 @@ static inline void error_free(error_t *err) {
     free(err);
 }
 
+/* Some global errors */
+extern error_t *err_allocation_failed;
+
 #endif // INCLUDE_SRC_ERROR_H_

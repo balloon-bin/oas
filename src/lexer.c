@@ -20,9 +20,6 @@ error_t *err_eof =
 
 error_t *err_unknown_read = &(error_t){.message = "Unknown read error"};
 
-error_t *err_allocation_failed =
-    &(error_t){.message = "Memory allocation failed"};
-
 typedef bool (*char_predicate_t)(char);
 
 const char *lexer_token_id_to_cstr(lexer_token_id_t id) {
