@@ -1,5 +1,6 @@
 #include "error.h"
 #include "lexer.h"
+#include "tokenlist.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -39,24 +40,33 @@ int main(int argc, char *argv[]) {
         print_fn = print_value;
     }
 
-    lexer_t lex = {0};
-    lexer_token_t token;
-    error_t *err = lexer_open(&lex, filename);
-    if (err) {
-        puts(err->message);
-        error_free(err);
-        return 1;
-    }
+    lexer_t *lex = &(lexer_t){};
+    error_t *err = lexer_open(lex, filename);
+    if (err)
+        goto cleanup_error;
 
-    bool keep_going = true;
-    while (keep_going && (err = lexer_next(&lex, &token)) == nullptr) {
-        keep_going = print_fn(&token);
-        free(token.value);
-    }
+    tokenlist_t *list;
+    err = tokenlist_alloc(&list);
+    if (err)
+        goto cleanup_lexer;
 
-    if (err && err != err_eof) {
-        puts(err->message);
+    err = tokenlist_fill(list, lex);
+    if (err)
+        goto cleanup_tokens;
+
+    for (auto entry = list->head; entry; entry = entry->next) {
+        print_fn(&entry->token);
     }
+    tokenlist_free(list);
     error_free(err);
     return 0;
+
+cleanup_tokens:
+    tokenlist_free(list);
+cleanup_lexer:
+    lexer_close(lex);
+cleanup_error:
+    puts(err->message);
+    error_free(err);
+    return 1;
 }
