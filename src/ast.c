@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "error.h"
+#include <assert.h>
 #include <string.h>
 
 error_t *err_node_children_cap = &(error_t){
@@ -82,4 +83,105 @@ error_t *ast_node_add_child(ast_node_t *node, ast_node_t *child) {
     node->len += 1;
 
     return nullptr;
+}
+
+const char *ast_node_id_to_cstr(node_id_t id) {
+    switch (id) {
+    case NODE_INVALID:
+        return "NODE_INVALID";
+    case NODE_PROGRAM:
+        return "NODE_PROGRAM";
+    case NODE_STATEMENT:
+        return "NODE_STATEMENT";
+    case NODE_LABEL:
+        return "NODE_LABEL";
+    case NODE_DIRECTIVE:
+        return "NODE_DIRECTIVE";
+    case NODE_INSTRUCTION:
+        return "NODE_INSTRUCTION";
+    case NODE_OPERANDS:
+        return "NODE_OPERANDS";
+    case NODE_OPERAND:
+        return "NODE_OPERAND";
+    case NODE_IMMEDIATE:
+        return "NODE_IMMEDIATE";
+    case NODE_MEMORY:
+        return "NODE_MEMORY";
+    case NODE_NUMBER:
+        return "NODE_NUMBER";
+    case NODE_LABEL_REFERENCE:
+        return "NODE_LABEL_REFERENCE";
+    case NODE_MEMORY_EXPRESSION:
+        return "NODE_MEMORY_EXPRESSION";
+    case NODE_REGISTER_EXPRESSION:
+        return "NODE_REGISTER_EXPRESSION";
+    case NODE_REGISTER_INDEX:
+        return "NODE_REGISTER_INDEX";
+    case NODE_REGISTER_OFFSET:
+        return "NODE_REGISTER_OFFSET";
+    case NODE_PLUS_OR_MINUS:
+        return "NODE_PLUS_OR_MINUS";
+    case NODE_SECTION_DIRECTIVE:
+        return "NODE_SECTION_DIRECTIVE";
+    case NODE_REGISTER:
+        return "NODE_REGISTER";
+    case NODE_SECTION:
+        return "NODE_SECTION";
+    case NODE_IDENTIFIER:
+        return "NODE_IDENTIFIER";
+    case NODE_DECIMAL:
+        return "NODE_DECIMAL";
+    case NODE_HEXADECIMAL:
+        return "NODE_HEXADECIMAL";
+    case NODE_OCTAL:
+        return "NODE_OCTAL";
+    case NODE_BINARY:
+        return "NODE_BINARY";
+    case NODE_CHAR:
+        return "NODE_CHAR";
+    case NODE_STRING:
+        return "NODE_STRING";
+    case NODE_COLON:
+        return "NODE_COLON";
+    case NODE_COMMA:
+        return "NODE_COMMA";
+    case NODE_LBRACKET:
+        return "NODE_LBRACKET";
+    case NODE_RBRACKET:
+        return "NODE_RBRACKET";
+    case NODE_PLUS:
+        return "NODE_PLUS";
+    case NODE_MINUS:
+        return "NODE_MINUS";
+    case NODE_ASTERISK:
+        return "NODE_ASTERISK";
+    case NODE_DOT:
+        return "NODE_DOT";
+    }
+    assert(!"Unreachable, weird node id" && id);
+    __builtin_unreachable();
+}
+
+static void ast_node_print_internal(ast_node_t *node, int indent) {
+    if (node == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < indent; i++) {
+        printf("  ");
+    }
+    printf("%s", ast_node_id_to_cstr(node->id));
+
+    if (node->token_entry && node->token_entry->token.value) {
+        printf(" \"%s\"", node->token_entry->token.value);
+    }
+    printf("\n");
+
+    for (size_t i = 0; i < node->len; i++) {
+        ast_node_print_internal(node->children[i], indent + 1);
+    }
+}
+
+void ast_node_print(ast_node_t *node) {
+    ast_node_print_internal(node, 0);
 }

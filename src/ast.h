@@ -106,4 +106,15 @@ void ast_node_free(ast_node_t *node);
  */
 error_t *ast_node_add_child(ast_node_t *node, ast_node_t *child);
 
+/**
+ * @brief Prints an AST starting from the given node
+ *
+ * Prints a representation of the AST with indentation to show structure.
+ * Each node's type is shown, and if a node has an associated token value,
+ * that value is printed in quotes.
+ *
+ * @param node The root node of the AST to print
+ */
+void ast_node_print(ast_node_t *node);
+
 #endif // INCLUDE_SRC_AST_H_
