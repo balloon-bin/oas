@@ -10,7 +10,7 @@ OBJECTS = $(SOURCES:.c=.o)
 DEPENDENCIES = $(SOURCES:.c=.d)
 TARGET?=oas
 OUTPUTS=oas oas-asan oas-msan oas-afl
-RUNARGUMENTS?=-tokens tests/input/valid.asm
+RUNARGUMENTS?=ast tests/input/valid.asm
 
 all: $(TARGET)
 	

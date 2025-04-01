@@ -10,7 +10,7 @@ scan-build -o reports/static-analysis/ -plist-html --status-bugs make all
 # Run the sanitizer builds and valgrind
 make clean sanitize all
 
-ARGUMENTS=("-tokens" "-text")
+ARGUMENTS=("tokens" "text" "ast")
 while IFS= read -r INPUT_FILE; do
     for ARGS in ${ARGUMENTS[@]}; do
         ./oas-asan $ARGS $INPUT_FILE > /dev/null
