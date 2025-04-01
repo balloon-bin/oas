@@ -183,7 +183,7 @@ error_t *lexer_consume_n(lexer_t *lex, const size_t len,
                          char buffer[static len], const size_t n) {
     if (lex->buffer_count < n)
         return err_buffer_underrun;
-    if (len > n)
+    if (n > len)
         return err_consume_excessive_length;
 
     memcpy(buffer, lex->buffer, n);
