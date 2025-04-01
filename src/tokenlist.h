@@ -27,4 +27,14 @@ error_t *tokenlist_fill(tokenlist_t *list, lexer_t *lex);
 
 void tokenlist_free(tokenlist_t *list);
 
+/**
+ * Return the first token entry that isn't whitespace, newline or comment
+ */
+tokenlist_entry_t *tokenlist_skip_trivia(tokenlist_entry_t *current);
+
+/**
+ * Return the next token entry that isn't whitespace, newline or comment
+ */
+tokenlist_entry_t *tokenlist_next(tokenlist_entry_t *current);
+
 #endif // INCLUDE_SRC_TOKENLIST_H_

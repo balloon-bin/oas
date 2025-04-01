@@ -81,3 +81,26 @@ error_t *tokenlist_fill(tokenlist_t *list, lexer_t *lex) {
         return err;
     return nullptr;
 }
+
+bool is_trivia(tokenlist_entry_t *trivia) {
+    switch (trivia->token.id) {
+    case TOKEN_WHITESPACE:
+    case TOKEN_COMMENT:
+    case TOKEN_NEWLINE:
+        return true;
+    default:
+        return false;
+    }
+}
+
+tokenlist_entry_t *tokenlist_skip_trivia(tokenlist_entry_t *current) {
+    while (current && is_trivia(current))
+        current = current->next;
+    return current;
+}
+
+tokenlist_entry_t *tokenlist_next(tokenlist_entry_t *current) {
+    if (!current)
+        return nullptr;
+    return tokenlist_skip_trivia(current->next);
+}
