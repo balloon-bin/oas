@@ -13,6 +13,10 @@ parse_result_t parse_any(tokenlist_entry_t *current, parser_t parsers[]);
 parse_result_t parse_many(tokenlist_entry_t *current, node_id_t id,
                           bool allow_none, parser_t parser);
 
+parse_result_t parse_list(tokenlist_entry_t *current, node_id_t id,
+                          bool allow_none, lexer_token_id_t delimiter_id,
+                          parser_t parser);
+
 // Parse all tries to parse all parsers consecutively and if it succeeds it
 // wraps the parsed nodes in a new parent node.
 parse_result_t parse_consecutive(tokenlist_entry_t *current, node_id_t id,

@@ -1,5 +1,54 @@
 #include "combinators.h"
 
+// Parse a list of the given parser delimited by the given token id. Does not
+// store the delimiters in the parent node
+parse_result_t parse_list(tokenlist_entry_t *current, node_id_t id,
+                          bool allow_none, lexer_token_id_t delimiter_id,
+                          parser_t parser) {
+    ast_node_t *many;
+    error_t *err = ast_node_alloc(&many);
+    parse_result_t result;
+    if (err)
+        return parse_error(err);
+    many->id = id;
+
+    while (current) {
+        // Skip beyond the delimiter on all but the first iteration
+        if (many->len > 0) {
+            if (current->token.id != delimiter_id)
+                break;
+            current = tokenlist_next(current);
+            if (current == nullptr) {
+                // FIXME: this isn't quite right, we can't consume the delimiter
+                // if the next element will fail to parse but it's late and I
+                // must think this through tomorrow
+                break;
+            }
+        }
+
+        result = parser(current);
+        if (result.err == err_parse_no_match)
+            break;
+        if (result.err) {
+            ast_node_free(many);
+            return result;
+        }
+        err = ast_node_add_child(many, result.node);
+        if (err) {
+            ast_node_free(many);
+            ast_node_free(result.node);
+            return parse_error(err);
+        }
+        current = result.next;
+    }
+
+    if (!allow_none && many->len == 0) {
+        ast_node_free(many);
+        return parse_no_match();
+    }
+    return parse_success(many, current);
+}
+
 parse_result_t parse_any(tokenlist_entry_t *current, parser_t parsers[]) {
     parser_t parser;
     while ((parser = *parsers++)) {
@@ -10,9 +59,9 @@ parse_result_t parse_any(tokenlist_entry_t *current, parser_t parsers[]) {
     return parse_no_match();
 }
 
-// parse as many of the giver parsers objects in a row as possible, potentially
-// allowing none wraps the found objects in a new ast node with the given note
-// id
+// parse as many of the giver parsers objects in a row as possible,
+// potentially allowing none wraps the found objects in a new ast node with
+// the given note id
 parse_result_t parse_many(tokenlist_entry_t *current, node_id_t id,
                           bool allow_none, parser_t parser) {
     ast_node_t *many;
