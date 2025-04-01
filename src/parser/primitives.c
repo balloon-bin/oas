@@ -97,4 +97,7 @@ bool is_section_token(lexer_token_t *token) {
     return strcmp(token->value, "section") == 0;
 }
 
-parse_result_t parse_section(tokenlist_entry_t *current) {}
+parse_result_t parse_section(tokenlist_entry_t *current) {
+    return parse_token(current, TOKEN_IDENTIFIER, NODE_SECTION,
+                       is_section_token);
+}
