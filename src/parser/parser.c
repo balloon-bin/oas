@@ -9,7 +9,8 @@
 parse_result_t parse_number(tokenlist_entry_t *current) {
     parser_t parsers[] = {parse_octal, parse_decimal, parse_hexadecimal,
                           parse_binary, nullptr};
-    return parse_any(current, parsers);
+    parse_result_t result = parse_any(current, parsers);
+    return parse_result_wrap(NODE_NUMBER, result);
 }
 
 parse_result_t parse_plus_or_minus(tokenlist_entry_t *current) {
@@ -83,7 +84,8 @@ parse_result_t parse_register_expression(tokenlist_entry_t *current) {
 
 parse_result_t parse_immediate(tokenlist_entry_t *current) {
     parser_t parsers[] = {parse_number, parse_identifier, nullptr};
-    return parse_any(current, parsers);
+    parse_result_t result = parse_any(current, parsers);
+    return parse_result_wrap(NODE_IMMEDIATE, result);
 }
 
 parse_result_t parse_memory_expression(tokenlist_entry_t *current) {

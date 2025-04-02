@@ -33,3 +33,24 @@ parse_result_t parse_token(tokenlist_entry_t *current,
 
     return parse_success(node, current->next);
 }
+
+parse_result_t parse_result_wrap(node_id_t id, parse_result_t result) {
+    if (result.err)
+        return result;
+
+    ast_node_t *node;
+    error_t *err = ast_node_alloc(&node);
+    if (err) {
+        ast_node_free(result.node);
+        return parse_error(err);
+    }
+    node->id = id;
+
+    err = ast_node_add_child(node, result.node);
+    if (err) {
+        ast_node_free(result.node);
+        return parse_error(err);
+    }
+
+    return parse_success(node, result.next);
+}
