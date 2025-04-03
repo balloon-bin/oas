@@ -1,54 +1,42 @@
-.PHONY: all clean clean-objects clean-reports run sanitize validate fuzz
+.PHONY: all clean distclean release debug afl asan msan validate analyze fuzz
 
-CC=clang
-LD=clang
-CFLAGS=-Wall -Wextra -Wpedantic -O0 -g3 -std=c23 -fno-omit-frame-pointer -fno-optimize-sibling-calls -D_POSIX_C_SOURCE=200809L
-LDFLAGS?=
+debug: 
+	make -rRf make/debug.mk all
 
-SOURCES = $(shell find src/ -type f -name '*.c')
-OBJECTS = $(SOURCES:.c=.o)
-DEPENDENCIES = $(SOURCES:.c=.d)
-TARGET?=oas
-OUTPUTS=oas oas-asan oas-msan oas-afl
-RUNARGUMENTS?=ast tests/input/valid.asm
-
-all: $(TARGET)
+all: debug release afl asan msan
 	
 
-run: $(TARGET)
-	./$(TARGET) $(RUNARGUMENTS)
+release: 
+	make -rRf make/release.mk all
+
+afl:
+	make -rRf make/afl.mk all
 
 fuzz:
-	make CC="afl-clang-fast" LD="afl-clang-fast" TARGET="oas-afl" clean-objects all
-	make clean-objects
-	mkdir -p reports/afl
-	afl-fuzz -i tests/input -o reports/afl -m none -- ./oas-afl -tokens @@
+	make -rRf make/afl.mk fuzz
 
-sanitize:
-	make CFLAGS="$(CFLAGS) -fsanitize=address,undefined" \
-		LDFLAGS="-fsanitize=address,undefined" \
-		TARGET="oas-asan" clean-objects all
-	make CFLAGS="$(CFLAGS) -fsanitize=memory -fsanitize-memory-track-origins=2" \
-		LDFLAGS="-fsanitize=memory -fsanitize-memory-track-origins=2" \
-		TARGET="oas-msan" clean-objects all 
-	make clean-objects
+asan:
+	make -rRf make/asan.mk all
 
-validate:
+msan:
+	make -rRf make/msan.mk all
+
+validate: asan msan debug
 	./validate.sh
 
-$(TARGET): $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $^
+analyze:
+	make -rRf make/analyze.mk clean all
 
-%.o: %.c
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+clean:
+	make -rRf make/release.mk clean
+	make -rRf make/debug.mk clean
+	make -rRf make/afl.mk clean
+	make -rRf make/msan.mk clean
+	make -rRf make/asan.mk clean
+	make -rRf make/analyze.mk clean
+	rm -rf build/
 
--include $(DEPENDENCIES)
-
-clean-objects:
-	rm -f $(OBJECTS) $(DEPENDENCIES)
-
-clean-reports:
+distclean: clean
+	make -rRf make/afl.mk distclean
+	make -rRf make/analyze.mk distclean
 	rm -rf reports/
-
-clean: clean-objects
-	rm -f $(TARGET) $(OUTPUTS)
