@@ -24,4 +24,4 @@ $(BUILD_DIR)%.o: %.c
 -include $(DEPENDENCIES)
 
 clean:
-	rm -f $(BUILD_DIR)$(TARGET) $(OBJECTS)
+	rm -rf $(BUILD_DIR)

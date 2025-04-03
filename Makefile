@@ -19,7 +19,7 @@ asan:
 	make -rRf make/asan.mk all
 
 msan:
-	make -rRf make/asan.mk all
+	make -rRf make/msan.mk all
 
 validate: asan msan debug
 	./validate.sh
