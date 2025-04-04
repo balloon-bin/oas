@@ -5,20 +5,15 @@
 #include <errno.h>
 #include <string.h>
 
-error_t *err_lexer_already_open = &(error_t){
+error_t *const err_lexer_already_open = &(error_t){
     .message =
         "Can't open on a lexer object that is already opened. Close it first."};
-error_t *err_prefix_too_large =
+error_t *const err_prefix_too_large =
     &(error_t){.message = "Prefix too large for internal lexer buffer"};
-error_t *err_buffer_underrun = &(error_t){
+error_t *const err_buffer_underrun = &(error_t){
     .message = "Buffer does not contain enough characters for lexer_consume_n"};
-error_t *err_consume_excessive_length =
+error_t *const err_consume_excessive_length =
     &(error_t){.message = "Too many valid characters to consume"};
-
-error_t *err_eof =
-    &(error_t){.message = "Can't read from file because EOF is reached"};
-
-error_t *err_unknown_read = &(error_t){.message = "Unknown read error"};
 
 typedef bool (*char_predicate_t)(char);
 
@@ -112,7 +107,7 @@ error_t *lexer_fill_buffer(lexer_t *lex) {
         if (n == 0 && ferror(lex->fp))
             return errorf("Read error: %s", strerror(errno));
         if (n == 0)
-            return err_unknown_read;
+            return err_unknown_read_failure;
         remaining -= n;
         lex->buffer_count += n;
     }

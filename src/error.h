@@ -19,6 +19,8 @@ static inline void error_free(error_t *err) {
 }
 
 /* Some global errors */
-extern error_t *err_allocation_failed;
+extern error_t *const err_allocation_failed;
+extern error_t *const err_eof;
+extern error_t *const err_unknown_read_failure;
 
 #endif // INCLUDE_SRC_ERROR_H_

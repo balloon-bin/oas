@@ -21,6 +21,6 @@ parse_result_t parse_token(tokenlist_entry_t *current,
                            token_validator_t is_valid);
 parse_result_t parse_result_wrap(node_id_t id, parse_result_t result);
 
-extern error_t *err_parse_no_match;
+extern error_t *const err_parse_no_match;
 
 #endif // INCLUDE_PARSER_UTIL_H_

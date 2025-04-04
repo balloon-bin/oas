@@ -5,7 +5,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
-extern error_t *err_eof;
+extern error_t *const err_lexer_already_open;
+extern error_t *const err_prefix_too_large;
+extern error_t *const err_buffer_underrun;
+extern error_t *const err_consume_excessive_length;
 
 typedef enum {
     TOKEN_ERROR,

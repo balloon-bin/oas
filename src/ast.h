@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+extern error_t *const err_ast_children_cap;
+
 typedef enum node_id {
     NODE_INVALID,
 
