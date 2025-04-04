@@ -8,11 +8,11 @@
 error_t *const err_lexer_already_open = &(error_t){
     .message =
         "Can't open on a lexer object that is already opened. Close it first."};
-error_t *const err_prefix_too_large =
+error_t *const err_lexer_prefix_too_large =
     &(error_t){.message = "Prefix too large for internal lexer buffer"};
-error_t *const err_buffer_underrun = &(error_t){
+error_t *const err_lexer_buffer_underrun = &(error_t){
     .message = "Buffer does not contain enough characters for lexer_consume_n"};
-error_t *const err_consume_excessive_length =
+error_t *const err_lexer_consume_excessive_length =
     &(error_t){.message = "Too many valid characters to consume"};
 
 typedef bool (*char_predicate_t)(char);
@@ -177,9 +177,9 @@ error_t *lexer_not_implemented(lexer_t *lex, lexer_token_t *token) {
 error_t *lexer_consume_n(lexer_t *lex, const size_t len,
                          char buffer[static len], const size_t n) {
     if (lex->buffer_count < n)
-        return err_buffer_underrun;
+        return err_lexer_buffer_underrun;
     if (n > len)
-        return err_consume_excessive_length;
+        return err_lexer_consume_excessive_length;
 
     memcpy(buffer, lex->buffer, n);
     lexer_shift_buffer(lex, n);
@@ -224,7 +224,7 @@ error_t *lexer_consume(lexer_t *lex, const size_t n, char buffer[static n],
                 (lex->buffer_count > 0 && is_valid(lex->buffer[0]));
 
         if (have_more_characters && *n_consumed == buffer_size) {
-            return err_consume_excessive_length;
+            return err_lexer_consume_excessive_length;
         }
     } while (have_more_characters);
     return nullptr;
@@ -294,7 +294,7 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
 
     error_t *err = lexer_consume(lex, max_number_length - so_far,
                                  buffer + so_far, is_valid, &n);
-    if (err == err_consume_excessive_length) {
+    if (err == err_lexer_consume_excessive_length) {
         token->id = TOKEN_ERROR;
         token->explanation =
             "Number length exceeds the maximum of 128 characters";
@@ -324,7 +324,7 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
     if (suffix_length > 0) {
         err = lexer_consume_n(lex, max_number_length - so_far, buffer + so_far,
                               suffix_length);
-        if (err == err_consume_excessive_length) {
+        if (err == err_lexer_consume_excessive_length) {
             token->id = TOKEN_ERROR;
             token->explanation =
                 "Number length exceeds the maximum of 128 characters";
@@ -401,7 +401,7 @@ error_t *lexer_next_identifier(lexer_t *lex, lexer_token_t *token) {
 
     error_t *err = lexer_consume(lex, max_identifier_length, buffer,
                                  is_identifier_character, &n);
-    if (err == err_consume_excessive_length) {
+    if (err == err_lexer_consume_excessive_length) {
         token->id = TOKEN_ERROR;
         token->explanation =
             "Identifier length exceeds the maximum of 128 characters";
@@ -444,7 +444,7 @@ error_t *lexer_next_whitespace(lexer_t *lex, lexer_token_t *token) {
 
     error_t *err = lexer_consume(lex, max_whitespace_length, buffer,
                                  is_whitespace_character, &n);
-    if (err == err_consume_excessive_length) {
+    if (err == err_lexer_consume_excessive_length) {
         token->id = TOKEN_ERROR;
         token->explanation =
             "Whitespace length exceeds the maximum of 1024 characters";
@@ -479,7 +479,7 @@ error_t *lexer_next_comment(lexer_t *lex, lexer_token_t *token) {
 
     error_t *err = lexer_consume(lex, max_comment_length, buffer,
                                  is_comment_character, &n);
-    if (err == err_consume_excessive_length) {
+    if (err == err_lexer_consume_excessive_length) {
         token->id = TOKEN_ERROR;
         token->explanation =
             "Comment length exceeds the maximum of 1024 characters";
