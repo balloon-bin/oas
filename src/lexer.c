@@ -331,7 +331,7 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
         }
     }
 
-    lex->character_number += n;
+    lex->character_number += n + suffix_length;
     token->value = strdup(buffer);
     return nullptr;
 }
