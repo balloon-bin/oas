@@ -27,6 +27,9 @@ validate: asan msan debug
 analyze:
 	make -rRf make/analyze.mk clean all
 
+test:
+	make -rRf make/test.mk test
+
 clean:
 	make -rRf make/release.mk clean
 	make -rRf make/debug.mk clean
@@ -34,6 +37,7 @@ clean:
 	make -rRf make/msan.mk clean
 	make -rRf make/asan.mk clean
 	make -rRf make/analyze.mk clean
+	make -rRf make/test.mk clean
 	rm -rf build/
 
 distclean: clean
