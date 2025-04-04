@@ -299,6 +299,7 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
         token->explanation =
             "Number length exceeds the maximum of 128 characters";
     }
+    lex->character_number += n;
     so_far += n;
     if (n == 0) {
         token->id = TOKEN_ERROR;
@@ -328,10 +329,11 @@ error_t *lexer_next_number(lexer_t *lex, lexer_token_t *token) {
             token->id = TOKEN_ERROR;
             token->explanation =
                 "Number length exceeds the maximum of 128 characters";
+        } else {
+            lex->character_number += suffix_length;
         }
     }
 
-    lex->character_number += n;
     token->value = strdup(buffer);
     return nullptr;
 }
