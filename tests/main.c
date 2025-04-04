@@ -1,13 +1,16 @@
 #include "munit.h"
 
-extern const MunitSuite ast_test_suite;
+extern MunitTest ast_tests[];
+extern MunitTest lexer_tests[];
 
 int main(int argc, char *argv[MUNIT_ARRAY_PARAM(argc + 1)]) {
-    MunitSuite master_suite = {"/oas", nullptr, nullptr, 1, MUNIT_SUITE_OPTION_NONE};
+    MunitSuite suites[] = {
+        {"/ast",   ast_tests,   nullptr, 1, MUNIT_SUITE_OPTION_NONE},
+        {"/lexer", lexer_tests, nullptr, 1, MUNIT_SUITE_OPTION_NONE},
+        {nullptr,  nullptr,     nullptr, 0, MUNIT_SUITE_OPTION_NONE},
+    };
 
-    MunitSuite suites[] = {ast_test_suite, nullptr};
-
-    master_suite.suites = suites;
+    MunitSuite master_suite = {"/oas", nullptr, suites, 1, MUNIT_SUITE_OPTION_NONE};
 
     return munit_suite_main(&master_suite, nullptr, argc, argv);
 }
