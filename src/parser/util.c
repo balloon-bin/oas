@@ -1,7 +1,7 @@
 #include "util.h"
 #include "../tokenlist.h"
 
-error_t *err_parse_no_match =
+error_t *const err_parse_no_match =
     &(error_t){.message = "parsing failed to find the correct token sequence"};
 
 parse_result_t parse_error(error_t *err) {

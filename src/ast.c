@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <string.h>
 
-error_t *err_node_children_cap = &(error_t){
+error_t *const err_ast_children_cap = &(error_t){
     .message = "Failed to increase ast node children, max capacity reached"};
 
 error_t *ast_node_alloc(ast_node_t **output) {
@@ -50,7 +50,7 @@ error_t *ast_node_alloc_children(ast_node_t *node) {
 
 error_t *ast_node_grow_cap(ast_node_t *node) {
     if (node->cap >= node_max_children_cap) {
-        return err_node_children_cap;
+        return err_ast_children_cap;
     }
 
     size_t new_cap = node->cap * 2;

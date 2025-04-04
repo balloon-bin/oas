@@ -9,8 +9,13 @@ error_t *const err_errorf_alloc = &(error_t){
 error_t *const err_errorf_length = &(error_t){
     .message =
         "Formatting of another error failed to determine the error length"};
+error_t *const err_eof =
+    &(error_t){.message = "Read failed because EOF is reached"};
 
-error_t *err_allocation_failed =
+error_t *const err_unknown_read_failure =
+    &(error_t){.message = "Unknown read error"};
+
+error_t *const err_allocation_failed =
     &(error_t){.message = "Memory allocation failed"};
 
 error_t *errorf(const char *fmt, ...) {
