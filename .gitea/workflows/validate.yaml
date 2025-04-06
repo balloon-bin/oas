@@ -34,3 +34,7 @@ jobs:
       - name: make validate
         run: |
           make validate
+
+      - name: make test
+        run: |
+          make test
