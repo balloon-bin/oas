@@ -83,7 +83,7 @@ parse_result_t parse_register_expression(tokenlist_entry_t *current) {
 }
 
 parse_result_t parse_immediate(tokenlist_entry_t *current) {
-    parser_t parsers[] = {parse_number, parse_identifier, nullptr};
+    parser_t parsers[] = {parse_number, parse_label_reference, nullptr};
     parse_result_t result = parse_any(current, parsers);
     return parse_result_wrap(NODE_IMMEDIATE, result);
 }
