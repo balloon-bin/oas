@@ -2,6 +2,9 @@
 
 ; Small valid code snippet that should contain all different AST nodes
 
+.export _start
+.import exit
+
 _start:
     mov eax, ebx
     lea eax, [eax + ebx * 4 + 8]
@@ -19,3 +22,5 @@ _start:
     push 0xffff:64
     push 0o777:16
     push 0b0001:16
+    mov rax, 0
+    call exit
