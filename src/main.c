@@ -32,21 +32,22 @@ void print_text(tokenlist_t *list) {
     }
 }
 
-void print_ast(tokenlist_t *list) {
+error_t *print_ast(tokenlist_t *list) {
     parse_result_t result = parse(list->head);
-    if (result.err) {
-        puts(result.err->message);
-        error_free(result.err);
-        return;
-    }
+    if (result.err)
+        return result.err;
+
     ast_node_print(result.node);
 
     if (result.next != nullptr) {
         puts("First unparsed token:");
         lexer_token_print(&result.next->token);
     }
-
     ast_node_free(result.node);
+    if (result.next != nullptr) {
+        return errorf("did not parse entire input token stream");
+    }
+    return nullptr;
 }
 
 int get_execution_mode(int argc, char *argv[]) {
@@ -61,6 +62,20 @@ int get_execution_mode(int argc, char *argv[]) {
     if (strcmp(argv[1], "text") == 0)
         return MODE_TEXT;
     return MODE_AST;
+}
+
+error_t *do_action(mode_t mode, tokenlist_t *list) {
+    switch (mode) {
+    case MODE_TOKENS:
+        print_tokens(list);
+        return nullptr;
+    case MODE_TEXT:
+        print_text(list);
+        return nullptr;
+    case MODE_AST:
+        return print_ast(list);
+    }
+    __builtin_unreachable();
 }
 
 int main(int argc, char *argv[]) {
@@ -81,17 +96,9 @@ int main(int argc, char *argv[]) {
     if (err)
         goto cleanup_tokens;
 
-    switch (mode) {
-    case MODE_TOKENS:
-        print_tokens(list);
-        break;
-    case MODE_TEXT:
-        print_text(list);
-        break;
-    case MODE_AST:
-        print_ast(list);
-        break;
-    }
+    err = do_action(mode, list);
+    if (err)
+        goto cleanup_tokens;
 
     tokenlist_free(list);
     error_free(err);
