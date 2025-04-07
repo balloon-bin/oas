@@ -29,10 +29,14 @@ typedef enum node_id {
     NODE_REGISTER_OFFSET,
     NODE_PLUS_OR_MINUS,
     NODE_SECTION_DIRECTIVE,
+    NODE_IMPORT_DIRECTIVE,
+    NODE_EXPORT_DIRECTIVE,
 
     // Validated primitives
     NODE_REGISTER,
     NODE_SECTION,
+    NODE_IMPORT,
+    NODE_EXPORT,
 
     // Primitive nodes
     NODE_IDENTIFIER,

@@ -3,9 +3,13 @@
 
 <label> ::= <identifier> <colon>
 
-<directive> ::= <dot> <section_directive> <newline>
+<directive> ::= <dot> (<section_directive> | <export_directive> | <import_directive> ) <newline>
 
 <section_directive> ::= "section" <identifier>
+
+<export_directive> ::= "export" <identifier>
+
+<import_directive> ::= "import" <identifier>
 
 <instruction> ::= <identifier> <operands> <newline>
 

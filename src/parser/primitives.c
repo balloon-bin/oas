@@ -105,3 +105,19 @@ parse_result_t parse_section(tokenlist_entry_t *current) {
     return parse_token(current, TOKEN_IDENTIFIER, NODE_SECTION,
                        is_section_token);
 }
+
+bool is_import_token(lexer_token_t *token) {
+    return strcmp(token->value, "import") == 0;
+}
+
+parse_result_t parse_import(tokenlist_entry_t *current) {
+    return parse_token(current, TOKEN_IDENTIFIER, NODE_IMPORT, is_import_token);
+}
+
+bool is_export_token(lexer_token_t *token) {
+    return strcmp(token->value, "export") == 0;
+}
+
+parse_result_t parse_export(tokenlist_entry_t *current) {
+    return parse_token(current, TOKEN_IDENTIFIER, NODE_EXPORT, is_export_token);
+}

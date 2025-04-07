@@ -123,6 +123,10 @@ const char *ast_node_id_to_cstr(node_id_t id) {
         return "NODE_PLUS_OR_MINUS";
     case NODE_SECTION_DIRECTIVE:
         return "NODE_SECTION_DIRECTIVE";
+    case NODE_IMPORT_DIRECTIVE:
+        return "NODE_IMPORT_DIRECTIVE";
+    case NODE_EXPORT_DIRECTIVE:
+        return "NODE_EXPORT_DIRECTIVE";
     case NODE_REGISTER:
         return "NODE_REGISTER";
     case NODE_SECTION:
@@ -159,6 +163,10 @@ const char *ast_node_id_to_cstr(node_id_t id) {
         return "NODE_DOT";
     case NODE_NEWLINE:
         return "NODE_NEWLINE";
+    case NODE_IMPORT:
+        return "NODE_IMPORT";
+    case NODE_EXPORT:
+        return "NODE_EXPORT";
     }
     assert(!"Unreachable, weird node id" && id);
     __builtin_unreachable();

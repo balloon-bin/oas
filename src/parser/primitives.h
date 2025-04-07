@@ -27,5 +27,7 @@ parse_result_t parse_label_reference(tokenlist_entry_t *current);
  */
 parse_result_t parse_register(tokenlist_entry_t *current);
 parse_result_t parse_section(tokenlist_entry_t *current);
+parse_result_t parse_import(tokenlist_entry_t *current);
+parse_result_t parse_export(tokenlist_entry_t *current);
 
 #endif // INCLUDE_PARSER_PRIMITIVES_H_
