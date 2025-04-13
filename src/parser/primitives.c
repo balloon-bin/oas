@@ -1,5 +1,6 @@
 #include "primitives.h"
 #include "../ast.h"
+#include "../data/registers.h"
 #include <string.h>
 
 parse_result_t parse_identifier(tokenlist_entry_t *current) {
@@ -71,23 +72,9 @@ parse_result_t parse_label_reference(tokenlist_entry_t *current) {
                        nullptr);
 }
 
-const char *registers[] = {
-    // 64-bit registers
-    "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10",
-    "r11", "r12", "r13", "r14", "r15",
-    // 32-bit registers
-    "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi", "r8d", "r9d",
-    "r10d", "r11d", "r12d", "r13d", "r14d", "r15d",
-    // 16-bit registers
-    "ax", "cx", "dx", "bx", "sp", "bp", "si", "di", "r8w", "r9w", "r10w",
-    "r11w", "r12w", "r13w", "r14w", "r15w",
-    // 8-bit low registers
-    "al", "cl", "dl", "bl", "spl", "bpl", "sil", "dil", "r8b", "r9b", "r10b",
-    "r11b", "r12b", "r13b", "r14b", "r15b", nullptr};
-
 bool is_register_token(lexer_token_t *token) {
     for (size_t i = 0; registers[i] != nullptr; ++i)
-        if (strcmp(token->value, registers[i]) == 0)
+        if (strcmp(token->value, registers[i]->name) == 0)
             return true;
     return false;
 }
