@@ -1,6 +1,7 @@
 #ifndef INCLUDE_SRC_AST_H_
 #define INCLUDE_SRC_AST_H_
 
+#include "data/registers.h"
 #include "error.h"
 #include "lexer.h"
 #include "tokenlist.h"
@@ -63,6 +64,16 @@ constexpr size_t node_default_children_cap = 8;
 /* 65K ought to be enough for anybody */
 constexpr size_t node_max_children_cap = 1 << 16;
 
+typedef struct number {
+    uint64_t value;
+    operand_size_t size;
+} number_t;
+
+typedef struct register_ {
+    register_id_t id;
+    operand_size_t size;
+} register_t;
+
 struct ast_node {
     node_id_t id;
     tokenlist_entry_t *token_entry;
@@ -71,11 +82,8 @@ struct ast_node {
     ast_node_t **children;
 
     union {
-        struct {
-            uint64_t value;
-            int size;
-        } integer;
-        char *name;
+        register_t reg;
+        number_t number;
     } value;
 };
 
