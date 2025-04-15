@@ -74,6 +74,11 @@ typedef struct register_ {
     operand_size_t size;
 } register_t;
 
+typedef struct opcode_encoding {
+    uint8_t encoding[32];
+    size_t len;
+} opcode_encoding_t;
+
 struct ast_node {
     node_id_t id;
     tokenlist_entry_t *token_entry;
@@ -84,6 +89,7 @@ struct ast_node {
     union {
         register_t reg;
         number_t number;
+        opcode_encoding_t encoding;
     } value;
 };
 
