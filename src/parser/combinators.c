@@ -1,4 +1,5 @@
 #include "combinators.h"
+#include "util.h"
 
 // Parse a list of the given parser delimited by the given token id. Does not
 // store the delimiters in the parent node
@@ -122,5 +123,12 @@ parse_result_t parse_consecutive(tokenlist_entry_t *current, node_id_t id,
         }
         current = result.next;
     }
+
+    // token stream ended before we matched all parsers
+    if (parser != nullptr) {
+        ast_node_free(all);
+        return parse_no_match();
+    }
+
     return parse_success(all, current);
 }
