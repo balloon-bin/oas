@@ -157,6 +157,8 @@ const char *ast_node_id_to_cstr(node_id_t id) {
         return "NODE_ASTERISK";
     case NODE_DOT:
         return "NODE_DOT";
+    case NODE_NEWLINE:
+        return "NODE_NEWLINE";
     }
     assert(!"Unreachable, weird node id" && id);
     __builtin_unreachable();
@@ -172,7 +174,8 @@ static void ast_node_print_internal(ast_node_t *node, int indent) {
     }
     printf("%s", ast_node_id_to_cstr(node->id));
 
-    if (node->token_entry && node->token_entry->token.value) {
+    if (node->token_entry && node->token_entry->token.value &&
+        node->id != NODE_NEWLINE) {
         printf(" \"%s\"", node->token_entry->token.value);
     }
     printf("\n");

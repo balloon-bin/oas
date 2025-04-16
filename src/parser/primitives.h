@@ -18,6 +18,7 @@ parse_result_t parse_plus(tokenlist_entry_t *current);
 parse_result_t parse_minus(tokenlist_entry_t *current);
 parse_result_t parse_asterisk(tokenlist_entry_t *current);
 parse_result_t parse_dot(tokenlist_entry_t *current);
+parse_result_t parse_newline(tokenlist_entry_t *current);
 parse_result_t parse_label_reference(tokenlist_entry_t *current);
 
 /* These are "primitives" with a different name and some extra validation on top

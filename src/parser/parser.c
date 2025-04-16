@@ -120,18 +120,20 @@ parse_result_t parse_section_directive(tokenlist_entry_t *current) {
 }
 
 parse_result_t parse_directive(tokenlist_entry_t *current) {
-    parser_t parsers[] = {parse_dot, parse_section_directive, nullptr};
+    parser_t parsers[] = {parse_dot, parse_section_directive, parse_newline,
+                          nullptr};
     return parse_consecutive(current, NODE_DIRECTIVE, parsers);
 }
 
 parse_result_t parse_instruction(tokenlist_entry_t *current) {
-    parser_t parsers[] = {parse_identifier, parse_operands, nullptr};
+    parser_t parsers[] = {parse_identifier, parse_operands, parse_newline,
+                          nullptr};
     return parse_consecutive(current, NODE_INSTRUCTION, parsers);
 }
 
 parse_result_t parse_statement(tokenlist_entry_t *current) {
     parser_t parsers[] = {parse_label, parse_directive, parse_instruction,
-                          nullptr};
+                          parse_newline, nullptr};
     return parse_any(current, parsers);
 }
 

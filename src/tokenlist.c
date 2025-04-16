@@ -86,7 +86,6 @@ bool is_trivia(tokenlist_entry_t *trivia) {
     switch (trivia->token.id) {
     case TOKEN_WHITESPACE:
     case TOKEN_COMMENT:
-    case TOKEN_NEWLINE:
         return true;
     default:
         return false;

@@ -50,6 +50,7 @@ typedef enum node_id {
     NODE_MINUS,
     NODE_ASTERISK,
     NODE_DOT,
+    NODE_NEWLINE,
 } node_id_t;
 
 typedef struct ast_node ast_node_t;

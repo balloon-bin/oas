@@ -1,13 +1,13 @@
 <program>   ::= <statement>*
-<statement> ::= <label> | <directive> | <instruction>
+<statement> ::= <label> | <directive> | <instruction> | <newline>
 
 <label> ::= <identifier> <colon>
 
-<directive> ::= <dot> <section_directive>
+<directive> ::= <dot> <section_directive> <newline>
 
 <section_directive> ::= "section" <identifier>
 
-<instruction> ::= <identifier> <operands>
+<instruction> ::= <identifier> <operands> <newline>
 
 <operands> ::= <operand> ( <comma> <operand> )*
 

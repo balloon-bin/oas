@@ -62,6 +62,10 @@ parse_result_t parse_dot(tokenlist_entry_t *current) {
     return parse_token(current, TOKEN_DOT, NODE_DOT, nullptr);
 }
 
+parse_result_t parse_newline(tokenlist_entry_t *current) {
+    return parse_token(current, TOKEN_NEWLINE, NODE_NEWLINE, nullptr);
+}
+
 parse_result_t parse_label_reference(tokenlist_entry_t *current) {
     return parse_token(current, TOKEN_IDENTIFIER, NODE_LABEL_REFERENCE,
                        nullptr);
