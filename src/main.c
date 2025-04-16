@@ -1,3 +1,5 @@
+#include "ast.h"
+#include "encoder/encoder.h"
 #include "error.h"
 #include "lexer.h"
 #include "parser/parser.h"
@@ -8,7 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum mode { MODE_AST, MODE_TEXT, MODE_TOKENS } mode_t;
+typedef enum mode {
+    MODE_INVALID = -1,
+    MODE_AST,
+    MODE_TEXT,
+    MODE_TOKENS,
+    MODE_ENCODING,
+} mode_t;
 
 void print_tokens(tokenlist_t *list) {
     for (auto entry = list->head; entry; entry = entry->next) {
@@ -50,18 +58,61 @@ error_t *print_ast(tokenlist_t *list) {
     return nullptr;
 }
 
-int get_execution_mode(int argc, char *argv[]) {
-    if (argc != 3 || (strcmp(argv[1], "tokens") != 0 &&
-                      strcmp(argv[1], "text") != 0 && strcmp(argv[1], "ast"))) {
-        puts("Usage: oas [tokens|text|ast] <filename>");
-        exit(1);
+void print_hex(size_t len, uint8_t bytes[static len]) {
+    for (size_t i = 0; i < len; i++) {
+        printf("%02x", bytes[i]);
+        if (i < len - 1) {
+            printf(" ");
+        }
     }
+    printf("\n");
+}
+
+error_t *print_encoding(tokenlist_t *list) {
+    parse_result_t result = parse(list->head);
+    if (result.err)
+        return result.err;
+
+    encoder_t *encoder;
+    error_t *err = encoder_alloc(&encoder);
+    if (err)
+        goto cleanup_ast;
+
+    err = encoder_encode(encoder, result.node);
+    if (err)
+        goto cleanup_ast;
+
+    ast_node_t *root = result.node;
+    for (size_t i = 0; i < root->len; ++i) {
+        ast_node_t *node = root->children[i];
+        if (node->id != NODE_INSTRUCTION)
+            continue;
+
+        print_hex(node->value.encoding.len, node->value.encoding.encoding);
+    }
+
+    encoder_free(encoder);
+    ast_node_free(result.node);
+    return nullptr;
+
+cleanup_ast:
+    ast_node_free(result.node);
+    return err;
+}
+
+int get_execution_mode(int argc, char *argv[]) {
+    if (argc != 3)
+        return MODE_INVALID;
 
     if (strcmp(argv[1], "tokens") == 0)
         return MODE_TOKENS;
     if (strcmp(argv[1], "text") == 0)
         return MODE_TEXT;
-    return MODE_AST;
+    if (strcmp(argv[1], "ast") == 0)
+        return MODE_AST;
+    if (strcmp(argv[1], "encoding") == 0)
+        return MODE_ENCODING;
+    return MODE_INVALID;
 }
 
 error_t *do_action(mode_t mode, tokenlist_t *list) {
@@ -74,12 +125,20 @@ error_t *do_action(mode_t mode, tokenlist_t *list) {
         return nullptr;
     case MODE_AST:
         return print_ast(list);
+    case MODE_ENCODING:
+        return print_encoding(list);
+    case MODE_INVALID:
+        /* can't happen */
     }
     __builtin_unreachable();
 }
 
 int main(int argc, char *argv[]) {
     mode_t mode = get_execution_mode(argc, argv);
+    if (mode == MODE_INVALID) {
+        puts("Usage: oas [tokens|text|ast|encoding] <filename>");
+        exit(1);
+    }
     char *filename = argv[2];
 
     lexer_t *lex = &(lexer_t){};
