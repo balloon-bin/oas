@@ -139,5 +139,9 @@ parse_result_t parse_statement(tokenlist_entry_t *current) {
 
 parse_result_t parse(tokenlist_entry_t *current) {
     current = tokenlist_skip_trivia(current);
-    return parse_many(current, NODE_PROGRAM, true, parse_statement);
+    parse_result_t result =
+        parse_many(current, NODE_PROGRAM, true, parse_statement);
+    if (result.node != nullptr)
+        ast_node_prune(result.node, NODE_NEWLINE);
+    return result;
 }

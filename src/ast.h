@@ -120,4 +120,17 @@ error_t *ast_node_add_child(ast_node_t *node, ast_node_t *child);
  */
 void ast_node_print(ast_node_t *node);
 
+/**
+ * Prune the children with a given id
+ *
+ * The tree is recursively visited and all child nodes of a given ID are pruned
+ * completely. If a node has the giver id, it will get removed along wih all its
+ * children, even if some of those children have different ids. The root node id
+ * is never checked so the tree is guaranteed to remain and allocated valid.
+ *
+ * @param node The root of the tree you want to prune
+ * @param id The id of the nodes you want to prune
+ */
+void ast_node_prune(ast_node_t *node, node_id_t id);
+
 #endif // INCLUDE_SRC_AST_H_

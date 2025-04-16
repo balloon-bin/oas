@@ -188,3 +188,18 @@ static void ast_node_print_internal(ast_node_t *node, int indent) {
 void ast_node_print(ast_node_t *node) {
     ast_node_print_internal(node, 0);
 }
+
+void ast_node_prune(ast_node_t *node, node_id_t id) {
+    size_t new_len = 0;
+    for (size_t i = 0; i < node->len; i++) {
+        auto child = node->children[i];
+        if (child->id == id) {
+            ast_node_free(child);
+            continue;
+        }
+        ast_node_prune(child, id);
+        node->children[new_len] = child;
+        new_len++;
+    }
+    node->len = new_len;
+}
