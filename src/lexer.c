@@ -136,7 +136,7 @@ error_t *lexer_open(lexer_t *lex, char *path) {
  *
  * @pre There must be at least n characters in the input buffer
  */
-void lexer_shift_buffer(lexer_t *lex, int n) {
+void lexer_shift_buffer(lexer_t *lex, size_t n) {
     assert(lex->buffer_count >= n);
     lex->buffer_count -= n;
     memmove(lex->buffer, lex->buffer + n, lex->buffer_count);
