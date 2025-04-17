@@ -16,8 +16,10 @@ jobs:
           echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
           echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
 
+          # determine correct clang version and then install it
           apk update
-          apk add --no-cache llvm19 clang19 clang19-analyzer compiler-rt valgrind
+          RT_VERSION=$(apk search -v compiler-rt | grep -o "compiler-rt-[0-9]*" | head -1 | grep -o "[0-9]*")
+          apk add --no-cache llvm${RT_VERSION} clang${RT_VERSION} clang${RT_VERSION}-analyzer compiler-rt valgrind
 
           # Verify versions
           echo "---------------------"
