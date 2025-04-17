@@ -21,7 +21,7 @@ asan:
 msan:
 	make -rRf make/msan.mk all
 
-validate: asan msan debug
+validate: asan msan debug release
 	./validate.sh
 
 analyze:
