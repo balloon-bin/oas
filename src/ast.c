@@ -17,10 +17,6 @@ error_t *ast_node_alloc(ast_node_t **output) {
     return nullptr;
 }
 
-void ast_node_free_value(ast_node_t *node) {
-    // TODO: decide how value ownership will work and clean it up here
-}
-
 void ast_node_free(ast_node_t *node) {
     if (node == nullptr)
         return;
@@ -29,8 +25,6 @@ void ast_node_free(ast_node_t *node) {
             ast_node_free(node->children[i]);
         free(node->children);
     }
-
-    ast_node_free_value(node);
 
     memset(node, 0, sizeof(ast_node_t));
     free(node);
