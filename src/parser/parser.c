@@ -89,7 +89,8 @@ parse_result_t parse_immediate(tokenlist_entry_t *current) {
 }
 
 parse_result_t parse_memory_expression(tokenlist_entry_t *current) {
-    parser_t parsers[] = {parse_register_expression, parse_identifier, nullptr};
+    parser_t parsers[] = {parse_register_expression, parse_label_reference,
+                          nullptr};
     return parse_any(current, parsers);
 }
 
