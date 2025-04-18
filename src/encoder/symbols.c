@@ -92,7 +92,7 @@ EXPORT       |           |          |   ERR    |          |
 -------------|-----------|----------|----------|----------|
 */
 
-bool symbol_table_should_update(symbol_kind_t old, symbol_kind_t new) {
+bool symbol_table_should_upgrade(symbol_kind_t old, symbol_kind_t new) {
     if (old == SYMBOL_REFERENCE)
         return new != SYMBOL_REFERENCE;
     if (old == SYMBOL_LOCAL)
@@ -112,7 +112,7 @@ bool symbol_table_should_error(symbol_kind_t old, symbol_kind_t new) {
  * @pre The symbol _must not_ already be in the table.
  */
 error_t *symbol_table_add(symbol_table_t *table, char *name, symbol_kind_t kind,
-                          ast_node_t *node) {
+                          ast_node_t *statement) {
     if (table->len >= table->cap) {
         error_t *err = symbol_table_grow_cap(table);
         if (err)
@@ -122,7 +122,7 @@ error_t *symbol_table_add(symbol_table_t *table, char *name, symbol_kind_t kind,
     table->symbols[table->len] = (symbol_t){
         .name = name,
         .kind = kind,
-        .node = node,
+        .statement = statement,
     };
 
     table->len += 1;
@@ -130,23 +130,29 @@ error_t *symbol_table_add(symbol_table_t *table, char *name, symbol_kind_t kind,
     return nullptr;
 }
 
-error_t *symbol_table_update(symbol_table_t *table, ast_node_t *node) {
+error_t *symbol_table_update(symbol_table_t *table, ast_node_t *node,
+                             ast_node_t *statement) {
     char *name;
     symbol_kind_t kind;
     error_t *err = symbol_table_get_node_info(node, &kind, &name);
     if (err)
         return err;
 
+    if (kind != SYMBOL_LOCAL)
+        statement = nullptr;
+
     symbol_t *symbol = symbol_table_lookup(table, name);
     if (!symbol)
-        return symbol_table_add(table, name, kind, node);
+        return symbol_table_add(table, name, kind, statement);
     if (symbol_table_should_error(symbol->kind, kind))
         return err_symbol_table_incompatible_symbols;
-    if (symbol_table_should_update(symbol->kind, kind)) {
-        symbol->name = name;
+    if (symbol_table_should_upgrade(symbol->kind, kind)) {
         symbol->kind = kind;
-        symbol->node = node;
     }
+
+    if (kind == SYMBOL_LOCAL && symbol->statement == nullptr)
+        symbol->statement = statement;
+
     return nullptr;
 }
 

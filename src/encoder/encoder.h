@@ -5,6 +5,7 @@
 
 typedef struct encoder {
     symbol_table_t *symbols;
+    ast_node_t *ast;
 } encoder_t;
 
 constexpr uint8_t modrm_mod_memory = 0b00'000'000;
@@ -16,8 +17,8 @@ constexpr uint8_t modrm_reg_mask = 0b00'111'000;
 constexpr uint8_t modrm_rm_mask = 0b00'000'111;
 constexpr uint8_t modrm_mod_mask = 0b11'000'000;
 
-error_t *encoder_alloc(encoder_t **encoder);
-error_t *encoder_encode(encoder_t *encoder, ast_node_t *ast);
+error_t *encoder_alloc(encoder_t **encoder, ast_node_t *ast);
+error_t *encoder_encode(encoder_t *encoder);
 void encoder_free(encoder_t *encoder);
 
 extern error_t *const err_encoder_invalid_register;

@@ -23,12 +23,14 @@ error_t *const err_encoder_not_implemented =
 error_t *const err_encoder_unexpected_length =
     &(error_t){.message = "Unexpectedly long encoding"};
 
-error_t *encoder_alloc(encoder_t **output) {
+error_t *encoder_alloc(encoder_t **output, ast_node_t *ast) {
     *output = nullptr;
     encoder_t *encoder = calloc(1, sizeof(encoder_t));
 
     if (encoder == nullptr)
         return err_allocation_failed;
+
+    encoder->ast = ast;
 
     error_t *err = symbol_table_alloc(&encoder->symbols);
     if (err) {
@@ -213,15 +215,12 @@ static inline uint8_t modrm_rm(uint8_t modrm, register_id_t id) {
     return (modrm & ~modrm_rm_mask) | (id & 0b111);
 }
 
-/**
- * Perform the initial pass over the AST. Records all symbols and sets the
- * values of registers and numbers.
- */
-error_t *encoder_first_pass(encoder_t *encoder, ast_node_t *node) {
+error_t *encoder_collect_info(encoder_t *encoder, ast_node_t *node,
+                              ast_node_t *statement) {
     error_t *err = nullptr;
 
     if (encoder_is_symbols_node(node))
-        err = symbol_table_update(encoder->symbols, node);
+        err = symbol_table_update(encoder->symbols, node, statement);
     else if (node->id == NODE_NUMBER)
         err = encoder_set_number_value(node);
     else if (node->id == NODE_REGISTER)
@@ -230,7 +229,33 @@ error_t *encoder_first_pass(encoder_t *encoder, ast_node_t *node) {
         return err;
 
     for (size_t i = 0; i < node->len; ++i) {
-        error_t *err = encoder_first_pass(encoder, node->children[i]);
+        error_t *err =
+            encoder_collect_info(encoder, node->children[i], statement);
+        if (err)
+            return err;
+    }
+
+    return nullptr;
+}
+
+/**
+ * Perform the initial pass over the AST.
+ *
+ * - Collect information about the operands
+ *   - parse and set number values
+ *   - set the register values
+ *   - determine if label references are used by an instruction
+ * - encode instructions that don't use label references
+ * - determine estimated addresses of each statement
+ *
+ */
+error_t *encoder_first_pass(encoder_t *encoder) {
+    ast_node_t *root = encoder->ast;
+    assert(root->id == NODE_PROGRAM);
+
+    for (size_t i = 0; i < root->len; ++i) {
+        ast_node_t *statement = root->children[i];
+        error_t *err = encoder_collect_info(encoder, statement, statement);
         if (err)
             return err;
     }
@@ -485,7 +510,9 @@ error_t *encoder_encode_instruction(encoder_t *encoder,
  * placeholder values for label references because instruction size has not
  * yet been determined.
  */
-error_t *encoder_encoding_pass(encoder_t *encoder, ast_node_t *root) {
+error_t *encoder_second_pass(encoder_t *encoder) {
+    ast_node_t *root = encoder->ast;
+
     for (size_t i = 0; i < root->len; ++i) {
         if (root->children[i]->id != NODE_INSTRUCTION)
             continue;
@@ -515,12 +542,12 @@ error_t *encoder_check_symbols(encoder_t *encoder) {
     return nullptr;
 }
 
-error_t *encoder_encode(encoder_t *encoder, ast_node_t *ast) {
-    error_t *err = encoder_first_pass(encoder, ast);
+error_t *encoder_encode(encoder_t *encoder) {
+    error_t *err = encoder_first_pass(encoder);
     if (err)
         return err;
     err = encoder_check_symbols(encoder);
     if (err)
         return err;
-    return encoder_encoding_pass(encoder, ast);
+    return encoder_second_pass(encoder);
 }

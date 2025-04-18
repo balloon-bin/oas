@@ -29,7 +29,7 @@ typedef enum symbol_kind {
 typedef struct symbol {
     char *name;
     symbol_kind_t kind;
-    ast_node_t *node;
+    ast_node_t *statement;
 } symbol_t;
 
 typedef struct symbol_table {
@@ -40,7 +40,8 @@ typedef struct symbol_table {
 
 error_t *symbol_table_alloc(symbol_table_t **table);
 void symbol_table_free(symbol_table_t *table);
-error_t *symbol_table_update(symbol_table_t *table, ast_node_t *node);
+error_t *symbol_table_update(symbol_table_t *table, ast_node_t *node,
+                             ast_node_t *statement);
 symbol_t *symbol_table_lookup(symbol_table_t *table, const char *name);
 
 #endif // INCLUDE_ENCODER_SYMBOLS_H_

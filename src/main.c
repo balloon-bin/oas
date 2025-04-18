@@ -74,11 +74,11 @@ error_t *print_encoding(tokenlist_t *list) {
         return result.err;
 
     encoder_t *encoder;
-    error_t *err = encoder_alloc(&encoder);
+    error_t *err = encoder_alloc(&encoder, result.node);
     if (err)
         goto cleanup_ast;
 
-    err = encoder_encode(encoder, result.node);
+    err = encoder_encode(encoder);
     if (err)
         goto cleanup_ast;
 
