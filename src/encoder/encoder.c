@@ -481,7 +481,7 @@ error_t *encoder_encode_instruction(encoder_t *encoder,
         return err;
 
     // produce the actual encoding output in the NODE_INSTRUCTION value
-    uint8_t *output = instruction->value.encoding.encoding;
+    uint8_t *output = instruction->value.instruction.encoding.buffer;
     size_t output_len = 0;
 
     // Handle prefixes
@@ -500,7 +500,7 @@ error_t *encoder_encode_instruction(encoder_t *encoder,
     memcpy(output + output_len, encoding->buffer, encoding->len);
     output_len += encoding->len;
 
-    instruction->value.encoding.len = output_len;
+    instruction->value.instruction.encoding.len = output_len;
 
     return nullptr;
 }

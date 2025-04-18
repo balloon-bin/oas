@@ -88,7 +88,8 @@ error_t *print_encoding(tokenlist_t *list) {
         if (node->id != NODE_INSTRUCTION)
             continue;
 
-        print_hex(node->value.encoding.len, node->value.encoding.encoding);
+        print_hex(node->value.instruction.encoding.len,
+                  node->value.instruction.encoding.buffer);
     }
 
     encoder_free(encoder);

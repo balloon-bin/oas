@@ -5,6 +5,7 @@
 #include "error.h"
 #include "lexer.h"
 #include "tokenlist.h"
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -75,9 +76,25 @@ typedef struct register_ {
 } register_t;
 
 typedef struct opcode_encoding {
-    uint8_t encoding[32];
+    uint8_t buffer[32];
     size_t len;
 } opcode_encoding_t;
+
+typedef struct instruction {
+    bool has_reference;
+    opcode_encoding_t encoding;
+    int64_t address;
+} instruction_t;
+
+typedef struct reference {
+    int64_t offset;
+    int64_t address;
+    operand_size_t size;
+} reference_t;
+
+typedef struct {
+    int64_t address;
+} label_t;
 
 struct ast_node {
     node_id_t id;
@@ -89,9 +106,36 @@ struct ast_node {
     union {
         register_t reg;
         number_t number;
-        opcode_encoding_t encoding;
+        instruction_t instruction;
+        reference_t reference;
+        label_t label;
     } value;
 };
+
+static inline register_t *ast_node_register_value(ast_node_t *node) {
+    assert(node->id == NODE_REGISTER);
+    return &node->value.reg;
+}
+
+static inline number_t *ast_node_number_value(ast_node_t *node) {
+    assert(node->id == NODE_NUMBER);
+    return &node->value.number;
+}
+
+static inline instruction_t *ast_node_instruction_value(ast_node_t *node) {
+    assert(node->id == NODE_INSTRUCTION);
+    return &node->value.instruction;
+}
+
+static inline reference_t *ast_node_reference_value(ast_node_t *node) {
+    assert(node->id == NODE_LABEL_REFERENCE);
+    return &node->value.reference;
+}
+
+static inline label_t *ast_node_label_value(ast_node_t *node) {
+    assert(node->id == NODE_LABEL);
+    return &node->value.label;
+}
 
 /**
  * @brief Allocates a new AST node
