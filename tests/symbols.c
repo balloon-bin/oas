@@ -58,17 +58,19 @@ MunitResult test_symbol_add_reference(const MunitParameter params[], void *data)
     symbol_table_alloc(&table);
 
     ast_node_t *reference = root->children[3]->children[1]->children[0]->children[0];
+    ast_node_t *statement = root->children[3]; // The containing statement
     munit_assert_int(reference->id, ==, NODE_LABEL_REFERENCE);
     munit_assert_size(table->len, ==, 0);
 
-    error_t *err = symbol_table_update(table, reference);
+    error_t *err = symbol_table_update(table, reference, statement);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 1);
 
     symbol_t *symbol = symbol_table_lookup(table, "test");
     munit_assert_not_null(symbol);
     munit_assert_int(SYMBOL_REFERENCE, ==, symbol->kind);
-    munit_assert_ptr_equal(reference, symbol->node);
+    // For references, the statement should be nullptr
+    munit_assert_ptr_null(symbol->statement);
     munit_assert_string_equal(symbol->name, "test");
 
     symbol_table_free(table);
@@ -90,14 +92,14 @@ MunitResult test_symbol_add_label(const MunitParameter params[], void *data) {
     munit_assert_int(label->id, ==, NODE_LABEL);
     munit_assert_size(table->len, ==, 0);
 
-    error_t *err = symbol_table_update(table, label);
+    error_t *err = symbol_table_update(table, label, label);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 1);
 
     symbol_t *symbol = symbol_table_lookup(table, "test");
     munit_assert_not_null(symbol);
     munit_assert_int(SYMBOL_LOCAL, ==, symbol->kind);
-    munit_assert_ptr_equal(label, symbol->node);
+    munit_assert_ptr_equal(label, symbol->statement);
     munit_assert_string_equal(symbol->name, "test");
 
     symbol_table_free(table);
@@ -116,17 +118,19 @@ MunitResult test_symbol_add_import(const MunitParameter params[], void *data) {
     symbol_table_alloc(&table);
 
     ast_node_t *import_directive = root->children[0]->children[1];
+    ast_node_t *statement = root->children[0]; // The containing statement
     munit_assert_int(import_directive->id, ==, NODE_IMPORT_DIRECTIVE);
     munit_assert_size(table->len, ==, 0);
 
-    error_t *err = symbol_table_update(table, import_directive);
+    error_t *err = symbol_table_update(table, import_directive, statement);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 1);
 
     symbol_t *symbol = symbol_table_lookup(table, "test");
     munit_assert_not_null(symbol);
     munit_assert_int(SYMBOL_IMPORT, ==, symbol->kind);
-    munit_assert_ptr_equal(import_directive, symbol->node);
+    // For import directives, the statement should be nullptr
+    munit_assert_ptr_null(symbol->statement);
     munit_assert_string_equal(symbol->name, "test");
 
     symbol_table_free(table);
@@ -135,41 +139,55 @@ MunitResult test_symbol_add_import(const MunitParameter params[], void *data) {
     return MUNIT_OK;
 }
 
-void test_symbol_update(const char *name, ast_node_t *first, symbol_kind_t first_kind, ast_node_t *second,
-                        symbol_kind_t second_kind, bool should_succeed, bool should_update) {
+void test_symbol_update(const char *name, ast_node_t *first, symbol_kind_t first_kind, ast_node_t *first_statement,
+                        ast_node_t *second, symbol_kind_t second_kind, ast_node_t *second_statement,
+                        bool should_succeed, bool should_update, ast_node_t *expected_statement) {
     symbol_table_t *table = nullptr;
     symbol_table_alloc(&table);
 
-    munit_assert_size(table->len, ==, 0);
-    error_t *err = symbol_table_update(table, first);
+    // Add the first symbol
+    error_t *err = symbol_table_update(table, first, first_statement);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 1);
 
+    // Verify first symbol state
     symbol_t *symbol = symbol_table_lookup(table, name);
     munit_assert_not_null(symbol);
     munit_assert_int(first_kind, ==, symbol->kind);
-    munit_assert_ptr_equal(first, symbol->node);
     munit_assert_string_equal(symbol->name, name);
 
-    err = symbol_table_update(table, second);
-    if (should_succeed)
-        munit_assert_null(err);
-    else
-        munit_assert_ptr_equal(err, err_symbol_table_incompatible_symbols);
-    munit_assert_size(table->len, ==, 1);
-
-    symbol = symbol_table_lookup(table, name);
-    if (should_update) {
-        munit_assert_not_null(symbol);
-        munit_assert_int(second_kind, ==, symbol->kind);
-        munit_assert_ptr_equal(second, symbol->node);
-        munit_assert_string_equal(symbol->name, name);
+    // Check statement based on symbol kind
+    if (first_kind == SYMBOL_LOCAL) {
+        munit_assert_ptr_equal(first_statement, symbol->statement);
     } else {
-        munit_assert_not_null(symbol);
-        munit_assert_int(first_kind, ==, symbol->kind);
-        munit_assert_ptr_equal(first, symbol->node);
-        munit_assert_string_equal(symbol->name, name);
+        munit_assert_ptr_null(symbol->statement);
     }
+
+    // Attempt the second update
+    err = symbol_table_update(table, second, second_statement);
+
+    // Check if update succeeded as expected
+    if (should_succeed) {
+        munit_assert_null(err);
+    } else {
+        munit_assert_ptr_equal(err, err_symbol_table_incompatible_symbols);
+        symbol_table_free(table);
+        return;
+    }
+
+    // Verify symbol after second update
+    symbol = symbol_table_lookup(table, name);
+    munit_assert_not_null(symbol);
+
+    // Check if kind updated as expected
+    if (should_update) {
+        munit_assert_int(second_kind, ==, symbol->kind);
+    } else {
+        munit_assert_int(first_kind, ==, symbol->kind);
+    }
+
+    // Simply check against the expected statement value
+    munit_assert_ptr_equal(expected_statement, symbol->statement);
 
     symbol_table_free(table);
 }
@@ -181,28 +199,43 @@ MunitResult test_symbol_upgrade_valid(const MunitParameter params[], void *data)
     symbols_setup_test(&root, &list, "tests/input/symbols.asm");
 
     ast_node_t *reference = root->children[3]->children[1]->children[0]->children[0];
+    ast_node_t *reference_statement = root->children[3];
     ast_node_t *label = root->children[2];
     ast_node_t *import_directive = root->children[0]->children[1];
+    ast_node_t *import_statement = root->children[0];
     ast_node_t *export_directive = root->children[1]->children[1];
+    ast_node_t *export_statement = root->children[1];
 
     // real upgrades
-    test_symbol_update("test", reference, SYMBOL_REFERENCE, label, SYMBOL_LOCAL, true, true);
-    test_symbol_update("test", reference, SYMBOL_REFERENCE, import_directive, SYMBOL_IMPORT, true, true);
-    test_symbol_update("test", reference, SYMBOL_REFERENCE, export_directive, SYMBOL_EXPORT, true, true);
-    test_symbol_update("test", label, SYMBOL_LOCAL, export_directive, SYMBOL_EXPORT, true, true);
+    test_symbol_update("test", reference, SYMBOL_REFERENCE, reference_statement, label, SYMBOL_LOCAL, label, true, true,
+                       label);
+    test_symbol_update("test", reference, SYMBOL_REFERENCE, reference_statement, import_directive, SYMBOL_IMPORT,
+                       import_statement, true, true, nullptr);
+    test_symbol_update("test", reference, SYMBOL_REFERENCE, reference_statement, export_directive, SYMBOL_EXPORT,
+                       export_statement, true, true, nullptr);
+    test_symbol_update("test", label, SYMBOL_LOCAL, label, export_directive, SYMBOL_EXPORT, export_statement, true,
+                       true, label);
 
     // identity upgrades
-    test_symbol_update("test", reference, SYMBOL_REFERENCE, reference, SYMBOL_REFERENCE, true, false);
-    test_symbol_update("test", label, SYMBOL_LOCAL, label, SYMBOL_LOCAL, true, false);
-    test_symbol_update("test", import_directive, SYMBOL_IMPORT, import_directive, SYMBOL_IMPORT, true, false);
-    test_symbol_update("test", export_directive, SYMBOL_EXPORT, export_directive, SYMBOL_EXPORT, true, false);
+    test_symbol_update("test", reference, SYMBOL_REFERENCE, reference_statement, reference, SYMBOL_REFERENCE,
+                       reference_statement, true, false, nullptr);
+    test_symbol_update("test", label, SYMBOL_LOCAL, label, label, SYMBOL_LOCAL, label, true, false, label);
+    test_symbol_update("test", import_directive, SYMBOL_IMPORT, import_statement, import_directive, SYMBOL_IMPORT,
+                       import_statement, true, false, nullptr);
+    test_symbol_update("test", export_directive, SYMBOL_EXPORT, export_statement, export_directive, SYMBOL_EXPORT,
+                       export_statement, true, false, nullptr);
 
     // downgrades that are allowed and ignored
-    test_symbol_update("test", label, SYMBOL_LOCAL, reference, SYMBOL_REFERENCE, true, false);
-    test_symbol_update("test", import_directive, SYMBOL_IMPORT, reference, SYMBOL_REFERENCE, true, false);
-    test_symbol_update("test", export_directive, SYMBOL_EXPORT, reference, SYMBOL_REFERENCE, true, false);
-    test_symbol_update("test", export_directive, SYMBOL_EXPORT, label, SYMBOL_LOCAL, true, false);
-    test_symbol_update("test", import_directive, SYMBOL_IMPORT, label, SYMBOL_LOCAL, true, false);
+    test_symbol_update("test", label, SYMBOL_LOCAL, label, reference, SYMBOL_REFERENCE, reference_statement, true,
+                       false, label);
+    test_symbol_update("test", import_directive, SYMBOL_IMPORT, import_statement, reference, SYMBOL_REFERENCE,
+                       reference_statement, true, false, nullptr);
+    test_symbol_update("test", export_directive, SYMBOL_EXPORT, export_statement, reference, SYMBOL_REFERENCE,
+                       reference_statement, true, false, nullptr);
+    test_symbol_update("test", export_directive, SYMBOL_EXPORT, export_statement, label, SYMBOL_LOCAL, label, true,
+                       false, label);
+    test_symbol_update("test", import_directive, SYMBOL_IMPORT, import_statement, label, SYMBOL_LOCAL, label, true,
+                       false, label);
 
     ast_node_free(root);
     tokenlist_free(list);
@@ -216,14 +249,20 @@ MunitResult test_symbol_upgrade_invalid(const MunitParameter params[], void *dat
     symbols_setup_test(&root, &list, "tests/input/symbols.asm");
 
     ast_node_t *reference = root->children[3]->children[1]->children[0]->children[0];
+    ast_node_t *reference_statement = root->children[3];
     ast_node_t *label = root->children[2];
     ast_node_t *import_directive = root->children[0]->children[1];
+    ast_node_t *import_statement = root->children[0];
     ast_node_t *export_directive = root->children[1]->children[1];
+    ast_node_t *export_statement = root->children[1];
 
     // invalid upgrades
-    test_symbol_update("test", label, SYMBOL_LOCAL, import_directive, SYMBOL_IMPORT, false, false);
-    test_symbol_update("test", export_directive, SYMBOL_EXPORT, import_directive, SYMBOL_IMPORT, false, false);
-    test_symbol_update("test", import_directive, SYMBOL_IMPORT, export_directive, SYMBOL_EXPORT, false, false);
+    test_symbol_update("test", label, SYMBOL_LOCAL, label, import_directive, SYMBOL_IMPORT, import_statement, false,
+                       false, nullptr);
+    test_symbol_update("test", export_directive, SYMBOL_EXPORT, export_statement, import_directive, SYMBOL_IMPORT,
+                       import_statement, false, false, nullptr);
+    test_symbol_update("test", import_directive, SYMBOL_IMPORT, import_statement, export_directive, SYMBOL_EXPORT,
+                       export_statement, false, false, nullptr);
 
     ast_node_free(root);
     tokenlist_free(list);
@@ -240,17 +279,19 @@ MunitResult test_symbol_add_export(const MunitParameter params[], void *data) {
     symbol_table_alloc(&table);
 
     ast_node_t *export_directive = root->children[1]->children[1];
+    ast_node_t *statement = root->children[1]; // The containing statement
     munit_assert_int(export_directive->id, ==, NODE_EXPORT_DIRECTIVE);
     munit_assert_size(table->len, ==, 0);
 
-    error_t *err = symbol_table_update(table, export_directive);
+    error_t *err = symbol_table_update(table, export_directive, statement);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 1);
 
     symbol_t *symbol = symbol_table_lookup(table, "test");
     munit_assert_not_null(symbol);
     munit_assert_int(SYMBOL_EXPORT, ==, symbol->kind);
-    munit_assert_ptr_equal(export_directive, symbol->node);
+    // For export directives, the statement should be nullptr
+    munit_assert_ptr_null(symbol->statement);
     munit_assert_string_equal(symbol->name, "test");
 
     symbol_table_free(table);
@@ -280,7 +321,7 @@ MunitResult test_symbol_table_growth(const MunitParameter params[], void *data) 
         ast_node_t *label = root->children[i];
         munit_assert_int(label->id, ==, NODE_LABEL);
 
-        error_t *err = symbol_table_update(table, label);
+        error_t *err = symbol_table_update(table, label, label);
         munit_assert_null(err);
         munit_assert_size(table->len, ==, i + 1);
 
@@ -292,7 +333,7 @@ MunitResult test_symbol_table_growth(const MunitParameter params[], void *data) 
     ast_node_t *final_label = root->children[64];
     munit_assert_int(final_label->id, ==, NODE_LABEL);
 
-    error_t *err = symbol_table_update(table, final_label);
+    error_t *err = symbol_table_update(table, final_label, final_label);
     munit_assert_null(err);
     munit_assert_size(table->len, ==, 65);
 
@@ -308,6 +349,7 @@ MunitResult test_symbol_table_growth(const MunitParameter params[], void *data) 
         munit_assert_not_null(symbol);
         munit_assert_int(SYMBOL_LOCAL, ==, symbol->kind);
         munit_assert_string_equal(symbol->name, name);
+        munit_assert_ptr_equal(symbol->statement, root->children[i]);
     }
 
     symbol_table_free(table);
@@ -326,7 +368,7 @@ MunitResult test_symbol_invalid_node(const MunitParameter params[], void *data) 
     symbol_table_alloc(&table);
 
     munit_assert_size(table->len, ==, 0);
-    error_t *err = symbol_table_update(table, root);
+    error_t *err = symbol_table_update(table, root, root);
     munit_assert_ptr_equal(err, err_symbol_table_invalid_node);
     munit_assert_size(table->len, ==, 0);
 
