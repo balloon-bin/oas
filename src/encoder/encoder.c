@@ -6,6 +6,31 @@
 #include <errno.h>
 #include <string.h>
 
+/**
+ * General encoder flow:
+ *
+ * There are 2 major passes the encoder does:
+ *
+ * First pass:
+ *   - Run through the AST and collect information:
+ *     - Set register values
+ *     - Parse/set number values
+ *     - Mark all instructions that use label references
+ *   - Encode all instructions that don't use label references
+ *   - Update addresses of all labels and instructions. Use an estimated
+ *     instruction size for those instructions that use label references.
+ *
+ * Second pass:
+ *   - Run through the AST for all instructions that use label references and
+ *     collect size information using the estimated addresses from pass 1
+ *   - Encode label references with the estimated addresses, this fixes their
+ *     size.
+ *   - Update all addresses
+ *
+ * Iteration:
+ *   - Repeat the second pass until addresses converge
+ */
+
 error_t *const err_encoder_invalid_register =
     &(error_t){.message = "Invalid register"};
 error_t *const err_encoder_number_overflow =
@@ -219,9 +244,11 @@ error_t *encoder_collect_info(encoder_t *encoder, ast_node_t *node,
                               ast_node_t *statement) {
     error_t *err = nullptr;
 
-    if (encoder_is_symbols_node(node))
+    if (encoder_is_symbols_node(node)) {
         err = symbol_table_update(encoder->symbols, node, statement);
-    else if (node->id == NODE_NUMBER)
+        if (statement->id == NODE_INSTRUCTION)
+            statement->value.instruction.has_reference = true;
+    } else if (node->id == NODE_NUMBER)
         err = encoder_set_number_value(node);
     else if (node->id == NODE_REGISTER)
         err = encoder_set_register_value(node);
@@ -238,36 +265,11 @@ error_t *encoder_collect_info(encoder_t *encoder, ast_node_t *node,
     return nullptr;
 }
 
-/**
- * Perform the initial pass over the AST.
- *
- * - Collect information about the operands
- *   - parse and set number values
- *   - set the register values
- *   - determine if label references are used by an instruction
- * - encode instructions that don't use label references
- * - determine estimated addresses of each statement
- *
- */
-error_t *encoder_first_pass(encoder_t *encoder) {
-    ast_node_t *root = encoder->ast;
-    assert(root->id == NODE_PROGRAM);
-
-    for (size_t i = 0; i < root->len; ++i) {
-        ast_node_t *statement = root->children[i];
-        error_t *err = encoder_collect_info(encoder, statement, statement);
-        if (err)
-            return err;
-    }
-
-    return nullptr;
-}
-
 bool is_operand_match(operand_info_t *info, ast_node_t *operand) {
     switch (info->kind) {
     case OPERAND_REGISTER:
         return operand->id == NODE_REGISTER &&
-               operand->value.reg.size == info->size;
+               ast_node_register_value(operand)->size == info->size;
     case OPERAND_MEMORY:
         return operand->id == NODE_MEMORY;
     case OPERAND_IMMEDIATE: {
@@ -276,7 +278,7 @@ bool is_operand_match(operand_info_t *info, ast_node_t *operand) {
         ast_node_t *child = operand->children[0];
 
         if (child->id == NODE_NUMBER)
-            return (child->value.number.size & info->size) > 0;
+            return (ast_node_number_value(child)->size & info->size) > 0;
         else if (child->id == NODE_LABEL_REFERENCE)
             return info->size == OPERAND_SIZE_32;
         // FIXME: first pass should give us information about the distance of
@@ -338,7 +340,7 @@ error_t *encode_one_register_in_opcode(encoder_t *encoder,
     (void)encoder;
     (void)opcode;
 
-    register_id_t id = operands->children[0]->value.reg.id;
+    register_id_t id = ast_node_register_value(operands->children[0])->id;
     encoding->buffer[encoding->len - 1] |= id & 0b111;
     if ((id & 0b1000) > 0) {
         *rex |= rex_prefix_r;
@@ -353,7 +355,7 @@ error_t *encode_one_register(encoder_t *encoder, opcode_data_t *opcode,
     assert(operands->len == 1);
     assert(operands->children[0]->id == NODE_REGISTER);
 
-    register_id_t id = operands->children[0]->value.reg.id;
+    register_id_t id = ast_node_register_value(operands->children[0])->id;
 
     uint8_t modrm = modrm_mod_register;
 
@@ -388,7 +390,7 @@ error_t *encode_one_immediate(encoder_t *encoder, opcode_data_t *opcode,
            immediate->id == NODE_LABEL_REFERENCE);
 
     if (immediate->id == NODE_NUMBER) {
-        uint64_t value = immediate->value.number.value;
+        uint64_t value = ast_node_number_value(immediate)->value;
         operand_size_t size = opcode->operands[0].size;
         error_t *err = nullptr;
         switch (size) {
@@ -481,7 +483,8 @@ error_t *encoder_encode_instruction(encoder_t *encoder,
         return err;
 
     // produce the actual encoding output in the NODE_INSTRUCTION value
-    uint8_t *output = instruction->value.instruction.encoding.buffer;
+    instruction_t *instruction_value = ast_node_instruction_value(instruction);
+    uint8_t *output = instruction_value->encoding.buffer;
     size_t output_len = 0;
 
     // Handle prefixes
@@ -500,26 +503,159 @@ error_t *encoder_encode_instruction(encoder_t *encoder,
     memcpy(output + output_len, encoding->buffer, encoding->len);
     output_len += encoding->len;
 
-    instruction->value.instruction.encoding.len = output_len;
+    instruction_value->encoding.len = output_len;
 
     return nullptr;
 }
 
 /**
- * Perform the second pass that performs actual encoding. Will use
- * placeholder values for label references because instruction size has not
- * yet been determined.
+ * Initial guess for instruction size of instructions that contain a label
+ * reference
  */
-error_t *encoder_second_pass(encoder_t *encoder) {
+constexpr size_t instruction_size_estimate = 10;
+
+/**
+ * Perform the initial pass over the AST.
+ *
+ * - Collect information about the operands
+ *   - parse and set number values
+ *   - set the register values
+ *   - determine if label references are used by an instruction
+ * - encode instructions that don't use label references
+ * - determine estimated addresses of each statement
+ *
+ */
+error_t *encoder_first_pass(encoder_t *encoder) {
     ast_node_t *root = encoder->ast;
+    assert(root->id == NODE_PROGRAM);
+
+    uintptr_t address = 0;
 
     for (size_t i = 0; i < root->len; ++i) {
-        if (root->children[i]->id != NODE_INSTRUCTION)
-            continue;
-        ast_node_t *instruction = root->children[i];
-        error_t *err = encoder_encode_instruction(encoder, instruction);
+        ast_node_t *statement = root->children[i];
+        error_t *err = encoder_collect_info(encoder, statement, statement);
         if (err)
             return err;
+
+        if (statement->id == NODE_INSTRUCTION &&
+            ast_node_instruction_value(statement)->has_reference == false) {
+            err = encoder_encode_instruction(encoder, statement);
+            if (err)
+                return err;
+            instruction_t *instruction = ast_node_instruction_value(statement);
+            instruction->address = address;
+            address += instruction->encoding.len;
+        } else if (statement->id == NODE_INSTRUCTION) {
+            instruction_t *instruction = ast_node_instruction_value(statement);
+            instruction->encoding.len = instruction_size_estimate;
+            instruction->address = address;
+            address += instruction_size_estimate;
+        } else if (statement->id == NODE_LABEL) {
+            label_t *label = ast_node_label_value(statement);
+            label->address = address;
+        }
+    }
+
+    return nullptr;
+}
+
+operand_size_t signed_to_size_mask(int64_t value) {
+    operand_size_t size = OPERAND_SIZE_64;
+
+    if (value >= INT8_MIN && value <= INT8_MAX)
+        size |= OPERAND_SIZE_8;
+
+    if (value >= INT16_MIN && value <= INT16_MAX)
+        size |= OPERAND_SIZE_16;
+
+    if (value >= INT32_MIN && value <= INT32_MAX)
+        size |= OPERAND_SIZE_32;
+
+    return size;
+}
+
+int64_t statement_offset(ast_node_t *from, ast_node_t *to) {
+    assert(from->id == NODE_INSTRUCTION);
+    assert(to->id == NODE_LABEL);
+
+    instruction_t *instruction = ast_node_instruction_value(from);
+    int64_t from_addr = instruction->address + instruction->encoding.len;
+    int64_t to_addr = ast_node_label_value(to)->address;
+
+    return to_addr - from_addr;
+}
+
+error_t *encoder_collect_reference_info(encoder_t *encoder, ast_node_t *node,
+                                        ast_node_t *statement) {
+    assert(statement->id == NODE_INSTRUCTION);
+    if (node->id == NODE_LABEL_REFERENCE) {
+        const char *name = node->token_entry->token.value;
+        symbol_t *symbol = symbol_table_lookup(encoder->symbols, name);
+        assert(symbol && symbol->statement &&
+               symbol->statement->id == NODE_LABEL);
+
+        int64_t offset = statement_offset(statement, symbol->statement);
+        int64_t absolute = ast_node_label_value(symbol->statement)->address;
+        operand_size_t size = signed_to_size_mask(offset);
+
+        node->value.reference.address = absolute;
+        node->value.reference.offset = offset;
+        node->value.reference.size = size;
+    }
+
+    return nullptr;
+}
+
+bool encoder_should_reencode(ast_node_t *statement) {
+    if (statement->id != NODE_INSTRUCTION)
+        return false;
+
+    instruction_t *instruction = ast_node_instruction_value(statement);
+    return instruction->has_reference;
+}
+
+void set_statement_address(ast_node_t *statement, int64_t address) {
+    if (statement->id == NODE_INSTRUCTION) {
+        ast_node_instruction_value(statement)->address = address;
+    } else if (statement->id == NODE_LABEL) {
+        ast_node_label_value(statement)->address = address;
+    }
+}
+
+size_t get_statement_length(ast_node_t *statement) {
+    if (statement->id != NODE_INSTRUCTION)
+        return 0;
+    return ast_node_instruction_value(statement)->encoding.len;
+}
+
+/**
+ * Perform the second pass. Updates the label info and encodes all instructions
+ * that have a label reference.that performs actual encoding.
+ */
+error_t *encoder_second_pass(encoder_t *encoder, bool *did_update) {
+    ast_node_t *root = encoder->ast;
+
+    *did_update = false;
+    int64_t address = 0;
+    for (size_t i = 0; i < root->len; ++i) {
+        ast_node_t *statement = root->children[i];
+
+        set_statement_address(statement, address);
+        size_t before = get_statement_length(statement);
+
+        if (encoder_should_reencode(statement)) {
+            error_t *err =
+                encoder_collect_reference_info(encoder, statement, statement);
+            if (err)
+                return err;
+            err = encoder_encode_instruction(encoder, statement);
+            if (err)
+                return err;
+        }
+
+        size_t after = get_statement_length(statement);
+        *did_update = *did_update || (before != after);
+        address += after;
     }
     return nullptr;
 }
@@ -549,5 +685,12 @@ error_t *encoder_encode(encoder_t *encoder) {
     err = encoder_check_symbols(encoder);
     if (err)
         return err;
-    return encoder_second_pass(encoder);
+
+    bool did_update = true;
+    for (int i = 0; i < 10 && did_update; ++i) {
+        err = encoder_second_pass(encoder, &did_update);
+        if (err)
+            return err;
+    }
+    return nullptr;
 }
