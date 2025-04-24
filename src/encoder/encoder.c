@@ -279,12 +279,9 @@ bool is_operand_match(operand_info_t *info, ast_node_t *operand) {
 
         if (child->id == NODE_NUMBER)
             return (ast_node_number_value(child)->size & info->size) > 0;
-        else if (child->id == NODE_LABEL_REFERENCE)
-            return info->size == OPERAND_SIZE_32;
-        // FIXME: first pass should give us information about the distance of
-        // the label reference so we can pick a size more appropriately instead
-        // of just defaulting to 32 bits
-        break;
+        else if (child->id == NODE_LABEL_REFERENCE) {
+            return info->size &= ast_node_reference_value(child)->size;
+        }
     } // end OPERAND_IMMEDIATE case
     }
     assert(false && "unreachable");
@@ -389,9 +386,9 @@ error_t *encode_one_immediate(encoder_t *encoder, opcode_data_t *opcode,
     assert(immediate->id == NODE_NUMBER ||
            immediate->id == NODE_LABEL_REFERENCE);
 
+    operand_size_t size = opcode->operands[0].size;
     if (immediate->id == NODE_NUMBER) {
         uint64_t value = ast_node_number_value(immediate)->value;
-        operand_size_t size = opcode->operands[0].size;
         error_t *err = nullptr;
         switch (size) {
         case OPERAND_SIZE_8:
@@ -411,10 +408,21 @@ error_t *encode_one_immediate(encoder_t *encoder, opcode_data_t *opcode,
         }
         return err;
     } else {
-        // FIXME: this still assumes references are always 32 bit
-        uint32_t value = 0xDEADBEEF;
-        return bytes_append_uint32(encoding, value);
+        reference_t *reference = ast_node_reference_value(immediate);
+        switch (size) {
+        case OPERAND_SIZE_64:
+            return bytes_append_uint64(encoding, reference->address);
+        case OPERAND_SIZE_32:
+            return bytes_append_uint32(encoding, reference->offset);
+        case OPERAND_SIZE_16:
+            return bytes_append_uint16(encoding, reference->offset);
+        case OPERAND_SIZE_8:
+            return bytes_append_uint8(encoding, reference->offset);
+        default:
+            assert(false && "intentionally unhandled");
+        }
     }
+    __builtin_unreachable();
 }
 
 error_t *encode_one_memory(encoder_t *encoder, opcode_data_t *opcode,
@@ -601,6 +609,13 @@ error_t *encoder_collect_reference_info(encoder_t *encoder, ast_node_t *node,
         node->value.reference.address = absolute;
         node->value.reference.offset = offset;
         node->value.reference.size = size;
+    }
+
+    for (size_t i = 0; i < node->len; ++i) {
+        error_t *err = encoder_collect_reference_info(
+            encoder, node->children[i], statement);
+        if (err)
+            return err;
     }
 
     return nullptr;

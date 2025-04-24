@@ -138,8 +138,128 @@ opcode_data_t *const opcodes[] = {
             { .kind = OPERAND_REGISTER, .size = OPERAND_SIZE_64 },
         },
     },
+    // CALL rel32
+    &(opcode_data_t) {
+        .mnemonic = "call",
+        .opcode = 0xE8,
+        .opcode_extension = opcode_extension_none,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_IMMEDIATE, .size = OPERAND_SIZE_32 },
+        },
+    },
+    // CALL reg64
+    &(opcode_data_t) {
+        .mnemonic = "call",
+        .opcode = 0xFF,
+        .opcode_extension = 2,
+        .encoding_class = ENCODING_DEFAULT,
+        .rex_w_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_REGISTER, .size = OPERAND_SIZE_64 },
+        },
+    },
+    // CALL mem64
+    &(opcode_data_t) {
+        .mnemonic = "call",
+        .opcode = 0xFF,
+        .opcode_extension = 2,
+        .encoding_class = ENCODING_DEFAULT,
+        .rex_w_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_MEMORY, .size = OPERAND_SIZE_64 },
+        },
+    },
+    // JMP rel8 (short jump)
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xEB,
+        .opcode_extension = opcode_extension_none,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_IMMEDIATE, .size = OPERAND_SIZE_8 },
+        },
+    },
 
+    // JMP rel16
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xE9,
+        .opcode_extension = opcode_extension_none,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_size_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_IMMEDIATE, .size = OPERAND_SIZE_16 },
+        },
+    },
 
+    // JMP reg16
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xFF,
+        .opcode_extension = 4,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_size_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_REGISTER, .size = OPERAND_SIZE_16 },
+        },
+    },
+
+    // JMP rel32 (near jump)
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xE9,
+        .opcode_extension = opcode_extension_none,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_IMMEDIATE, .size = OPERAND_SIZE_32 },
+        },
+    },
+
+    // JMP reg32
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xFF,
+        .opcode_extension = 4,
+        .encoding_class = ENCODING_DEFAULT,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_REGISTER, .size = OPERAND_SIZE_32 },
+        },
+    },
+
+    // JMP reg64
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xFF,
+        .opcode_extension = 4,
+        .encoding_class = ENCODING_DEFAULT,
+        .rex_w_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_REGISTER, .size = OPERAND_SIZE_64 },
+        },
+    },
+
+    // JMP mem64
+    &(opcode_data_t) {
+        .mnemonic = "jmp",
+        .opcode = 0xFF,
+        .opcode_extension = 4,
+        .encoding_class = ENCODING_DEFAULT,
+        .rex_w_prefix = true,
+        .operand_count = 1,
+        .operands = {
+            { .kind = OPERAND_MEMORY, .size = OPERAND_SIZE_64 },
+        },
+    },
     nullptr,
 };
 
